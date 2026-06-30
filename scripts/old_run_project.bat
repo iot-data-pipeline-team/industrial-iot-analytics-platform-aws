@@ -58,13 +58,13 @@ echo ====================================
 echo Starting Spark Streaming Job...
 echo ====================================
 
-start cmd /k "docker exec -it jupyter spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.0,org.apache.hadoop:hadoop-aws:3.3.4 --jars /home/jovyan/jars/postgresql-42.6.2.jar /home/jovyan/work/streaming_job.py"
+:: start cmd /k "docker exec -it jupyter spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0,org.elasticsearch:elasticsearch-spark-30_2.12:8.13.0,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262 --jars /home/jovyan/jars/postgresql-42.6.2.jar /home/jovyan/work/streaming_job.py"
 
 echo.
 echo ====================================
 echo Starting IoT Producer...
 echo ====================================
 
-start cmd /k ".\venv\Scripts\python.exe producer\ahmed_producer.py"
+:: start cmd /k ".\venv\Scripts\python.exe producer\ahmed_producer.py"
 
-start cmd /k ".\venv\Scripts\python.exe producer\worker_producer.py"
+:: start cmd /k ".\venv\Scripts\python.exe producer\worker_producer.py"

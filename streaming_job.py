@@ -8,11 +8,11 @@ spark = SparkSession.builder \
     .master("local[*]") \
     .appName("KafkaTest") \
     .config("spark.sql.session.timeZone", "UTC") \
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
-    .config("spark.hadoop.fs.s3a.access.key", "admin") \
-    .config("spark.hadoop.fs.s3a.secret.key", "password123") \
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+    .config(
+        "spark.hadoop.fs.s3a.aws.credentials.provider",
+        "com.amazonaws.auth.InstanceProfileCredentialsProvider"
+    ) \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("ERROR")
@@ -319,39 +319,39 @@ silver_kafka_query = silver_kafka_df.writeStream \
 #     .start()
 
 
-def write_bronze_to_minio(batch_df, batch_id):
+def write_bronze_to_s3(batch_df, batch_id):
 
     batch_df.write \
         .mode("append") \
         .parquet(
-            "s3a://iot-data/bronze/machine_bronze_data/"
+            "s3a://iot-platform-malek/bronze/machine_bronze_data/"
         )
     
-bronze_minio_query = bronze_df.writeStream \
-    .foreachBatch(write_bronze_to_minio) \
+bronze_s3_query = bronze_df.writeStream \
+    .foreachBatch(write_bronze_to_s3) \
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_bronze_minio"
+        "/home/jovyan/data/checkpoints/machine_bronze_s3"
     ) \
     .start()
 
-def write_silver_to_minio(batch_df, batch_id):
+def write_silver_to_s3(batch_df, batch_id):
 
     batch_df.write \
         .mode("append") \
         .parquet(
-            "s3a://iot-data/silver/machine_silver_data/"
+            "s3a://iot-platform-malek/silver/machine_silver_data/"
         )
     
-silver_minio_query = silver_df.writeStream \
-    .foreachBatch(write_silver_to_minio) \
+silver_s3_query = silver_df.writeStream \
+    .foreachBatch(write_silver_to_s3) \
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_silver_minio"
+        "/home/jovyan/data/checkpoints/machine_silver_s3"
     ) \
     .start()
 
-def write_gold_to_minio(batch_df, batch_id):
+def write_gold_to_s3(batch_df, batch_id):
 
     batch_df.select(
         col("machine_id"),
@@ -375,7 +375,7 @@ def write_gold_to_minio(batch_df, batch_id):
     ).write \
      .mode("append") \
      .parquet(
-         "s3a://iot-data/gold/machine_gold_data/"
+         "s3a://iot-platform-malek/gold/machine_gold_data/"
      )
     
 
@@ -383,12 +383,12 @@ def write_gold_to_minio(batch_df, batch_id):
 
 
 
-gold_minio_query = gold_df.writeStream \
-    .foreachBatch(write_gold_to_minio) \
+gold_s3_query = gold_df.writeStream \
+    .foreachBatch(write_gold_to_s3) \
     .outputMode("update") \
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_gold_minio"
+        "/home/jovyan/data/checkpoints/machine_gold_s3"
     ) \
     .start()
 
@@ -1231,7 +1231,7 @@ worker_gold_postgres_query = (
 )
 
 
-def write_worker_bronze_to_minio(
+def write_worker_bronze_to_s3(
     batch_df,
     batch_id
 ):
@@ -1239,24 +1239,24 @@ def write_worker_bronze_to_minio(
     batch_df.write \
         .mode("append") \
         .parquet(
-            "s3a://iot-data/bronze/worker_bronze_data/"
+            "s3a://iot-platform-malek/bronze/worker_bronze_data/"
         )
-worker_bronze_minio_query = (
+worker_bronze_s3_query = (
     worker_bronze_df
     .writeStream
     .foreachBatch(
-        write_worker_bronze_to_minio
+        write_worker_bronze_to_s3
     )
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_bronze_minio"
+        "/home/jovyan/data/checkpoints/worker_bronze_s3"
     )
     .start()
 )
 
 
 
-def write_worker_silver_to_minio(
+def write_worker_silver_to_s3(
     batch_df,
     batch_id
 ):
@@ -1264,22 +1264,22 @@ def write_worker_silver_to_minio(
     batch_df.write \
         .mode("append") \
         .parquet(
-            "s3a://iot-data/silver/worker_silver_data/"
+            "s3a://iot-platform-malek/silver/worker_silver_data/"
         )
-worker_silver_minio_query = (
+worker_silver_s3_query = (
     worker_silver_df
     .writeStream
     .foreachBatch(
-        write_worker_silver_to_minio
+        write_worker_silver_to_s3
     )
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_silver_minio"
+        "/home/jovyan/data/checkpoints/worker_silver_s3"
     )
     .start()
 )
 
-def write_worker_gold_to_minio(
+def write_worker_gold_to_s3(
     batch_df,
     batch_id
 ):
@@ -1294,19 +1294,19 @@ def write_worker_gold_to_minio(
     ).write \
      .mode("append") \
      .parquet(
-         "s3a://iot-data/gold/worker_gold_data/"
+         "s3a://iot-platform-malek/gold/worker_gold_data/"
      )
     
-worker_gold_minio_query = (
+worker_gold_s3_query = (
     worker_gold_df
     .writeStream
     .outputMode("update")
     .foreachBatch(
-        write_worker_gold_to_minio
+        write_worker_gold_to_s3
     )
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_gold_minio"
+        "/home/jovyan/data/checkpoints/worker_gold_s3"
     )
     .start()
 )    

@@ -48,7 +48,7 @@ chmod +x scripts/run_project.sh
 chmod +x scripts/run_spark.sh
 chmod +x scripts/run_machine_producer.sh
 chmod +x scripts/run_worker_producer.sh
-
+chmod +x scripts/reset.sh
 
 echo
 echo "===================================="

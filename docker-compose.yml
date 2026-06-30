@@ -209,6 +209,11 @@ services:
     environment:
       - SPARK_MASTER=spark://spark-master:7077
       - JUPYTER_TOKEN=${JUPYTER_TOKEN}
+
+      - OPENSEARCH_HOST=${OPENSEARCH_HOST}
+      - OPENSEARCH_PORT=${OPENSEARCH_PORT}
+      - OPENSEARCH_USER=${OPENSEARCH_USER}
+      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
     volumes:
       - .:/home/jovyan/work
       - ./jars:/home/jovyan/jars

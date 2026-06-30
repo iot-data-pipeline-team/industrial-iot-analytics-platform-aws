@@ -3,6 +3,7 @@ from pyspark.sql.functions import to_date, hour, lit, sum, count, min, greatest
 from pyspark.sql.functions import when, window, avg, to_timestamp, from_json, col
 from pyspark.sql.functions import to_json, struct, max
 from pyspark.sql.types import *
+import os
 
 spark = SparkSession.builder \
     .master("local[*]") \
@@ -16,6 +17,17 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 spark.sparkContext.setLogLevel("ERROR")
+
+
+# ===========================
+# Amazon OpenSearch Configuration
+# ===========================
+
+
+OPENSEARCH_HOST = os.getenv("OPENSEARCH_HOST")
+OPENSEARCH_PORT = os.getenv("OPENSEARCH_PORT", "443")
+OPENSEARCH_USER = os.getenv("OPENSEARCH_USER")
+OPENSEARCH_PASSWORD = os.getenv("OPENSEARCH_PASSWORD")
 
 df = spark.readStream \
     .format("kafka") \
@@ -673,10 +685,14 @@ gold_postgres_query = gold_df.writeStream \
 def write_silver_to_es(batch_df, batch_id):
     try:    
         batch_df.write \
-            .format("org.elasticsearch.spark.sql") \
-            .option("es.nodes", "elasticsearch") \
-            .option("es.port", "9200") \
-            .option("es.index.auto.create", "true") \
+            .format("opensearch") \
+            .option("opensearch.nodes", OPENSEARCH_HOST) \
+            .option("opensearch.port", OPENSEARCH_PORT) \
+            .option("opensearch.net.ssl", "true") \
+            .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+            .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+            .option("opensearch.nodes.wan.only", "true") \
+            .option("opensearch.index.auto.create", "true") \
             .mode("append") \
             .save("machine-events")
     except Exception as e:
@@ -713,10 +729,14 @@ def write_gold_to_es(batch_df, batch_id):
             col("avg_risk_score"),
             col("uptime_percentage")          
         ).write \
-        .format("org.elasticsearch.spark.sql") \
-        .option("es.nodes", "elasticsearch") \
-        .option("es.port", "9200") \
-        .option("es.index.auto.create", "true") \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
         .mode("append") \
         .save("machine-aggregates")
     except Exception as e:
@@ -1338,21 +1358,14 @@ def write_worker_silver_to_es(
             "worker_risk_level",
             "alert_level"
         ).write \
-        .format(
-            "org.elasticsearch.spark.sql"
-        ) \
-        .option(
-            "es.nodes",
-            "elasticsearch"
-        ) \
-        .option(
-            "es.port",
-            "9200"
-        ) \
-        .option(
-            "es.index.auto.create",
-            "true"
-        ) \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
         .mode("append") \
         .save(
             "worker-events"
@@ -1398,21 +1411,14 @@ def write_worker_gold_to_es(
             "workers_in_danger_zone",
             "avg_fatigue_score"
         ).write \
-        .format(
-            "org.elasticsearch.spark.sql"
-        ) \
-        .option(
-            "es.nodes",
-            "elasticsearch"
-        ) \
-        .option(
-            "es.port",
-            "9200"
-        ) \
-        .option(
-            "es.index.auto.create",
-            "true"
-        ) \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
         .mode("append") \
         .save(
             "worker-safety"

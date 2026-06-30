@@ -7,6 +7,22 @@
 
 ---
 
+
+# 📸 Screenshots
+
+## Kibana Dashboard
+
+<img width="1920" height="1080" alt="Screenshot (2259)" src="https://github.com/user-attachments/assets/b5d17c79-572b-46df-8a34-24157f1fa616" />
+
+
+## S3
+
+<img width="1920" height="1080" alt="Screenshot (2262)" src="https://github.com/user-attachments/assets/4f4d6059-7129-4225-8156-f1a505d3ccb2" />
+<img width="1920" height="1080" alt="Screenshot (2261)" src="https://github.com/user-attachments/assets/15f2261f-2409-4f6c-afac-9ba4ca8b921a" />
+<img width="1920" height="1080" alt="Screenshot (2260)" src="https://github.com/user-attachments/assets/61b2dce4-48b8-4831-8ec1-bf1d98e0fc3a" />
+
+
+
 ## 📌 Project Overview
 
 This project simulates a production Industrial IoT platform that continuously ingests, processes, stores, and analyzes streaming sensor data from industrial machines and worker safety devices.

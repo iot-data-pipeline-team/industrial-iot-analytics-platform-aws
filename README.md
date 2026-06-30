@@ -343,9 +343,6 @@ aws s3 ls
 
 ---
 
-# 👨‍💻 Author
-
-**Abdelrahman Malek**
 
 Industrial IoT Analytics Platform
 

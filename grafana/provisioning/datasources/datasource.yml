@@ -1,0 +1,25 @@
+apiVersion: 1
+
+datasources:
+  - name: grafana-opensearch-datasource
+    type: grafana-opensearch-datasource
+    access: proxy
+    isDefault: true
+
+    url: https://vpc-iot-platform-os-domain-alfusi76524i6uttderf7il64m.us-east-1.es.amazonaws.com
+
+    basicAuth: true
+    basicAuthUser: admin
+
+    secureJsonData:
+      basicAuthPassword: u2m.5!YvT-GkXP2
+
+    jsonData:
+      database: machine-events
+      flavor: opensearch
+      version: "3.5.0"
+      timeField: timestamp
+      maxConcurrentShardRequests: 5
+      pplEnabled: true
+
+    editable: true

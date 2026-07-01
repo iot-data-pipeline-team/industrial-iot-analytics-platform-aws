@@ -2,8 +2,6 @@
 
 set -e
 
-
-
 echo "===================================="
 echo "Starting infrastructure services..."
 echo "===================================="
@@ -13,11 +11,8 @@ docker compose up -d \
     kafka1 \
     kafka2 \
     kafka3 \
-    elasticsearch \
     postgres \
-    minio \
-    kibana
-
+    minio
 
 echo
 echo "===================================="
@@ -26,12 +21,7 @@ echo "===================================="
 
 docker compose run --rm kafka-init
 
-docker compose run --rm elasticsearch-init
-
-docker compose run --rm kibana-init
-
 docker compose run --rm minio-init
-
 
 echo
 echo "===================================="
@@ -39,7 +29,6 @@ echo "Starting Kafka UI..."
 echo "===================================="
 
 docker compose up -d kafka-ui
-
 
 echo
 echo "===================================="
@@ -50,7 +39,6 @@ docker compose up -d \
     spark-master \
     spark-worker \
     jupyter
-
 
 echo
 echo "Waiting for Jupyter..."
@@ -67,6 +55,12 @@ echo "Jupyter is ready."
 
 echo
 echo "===================================="
-echo "Project Started Successfully!"
+echo "Uploading OpenSearch templates..."
 echo "===================================="
 
+./scripts/opensearch_init.sh
+
+echo
+echo "===================================="
+echo "Project Started Successfully!"
+echo "===================================="

@@ -345,6 +345,24 @@ services:
       "
     networks:
       - kafka-net
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    container_name: grafana
+
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=datasourceLegacyIdApi
+
+    ports:
+      - "3000:3000"
+
+    restart: unless-stopped
+
+    networks:
+      - kafka-net  
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards        
 volumes:
   kafka1_data:
   kafka2_data:

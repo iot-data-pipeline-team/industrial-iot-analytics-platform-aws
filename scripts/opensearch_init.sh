@@ -5,7 +5,8 @@ set -e
 echo "Waiting for OpenSearch..."
 
 until docker exec jupyter bash -c '
-curl -f -k -s -u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
+curl -f -k -s \
+-u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
 "https://$OPENSEARCH_HOST:$OPENSEARCH_PORT" >/dev/null
 '
 do
@@ -16,103 +17,94 @@ done
 echo "OpenSearch is ready."
 
 ############################################
+# Helper Functions
+############################################
+
+upload_template() {
+    local template_name=$1
+    local template_file=$2
+
+    echo "Uploading template: $template_name..."
+
+    docker exec jupyter bash -c "
+    curl -f -k \
+    -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
+    -H 'Content-Type: application/json' \
+    -X PUT \
+    \"https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/_index_template/$template_name\" \
+    -d @$template_file
+    "
+}
+
+create_index_if_missing() {
+    local index_name=$1
+
+    echo "Checking index: $index_name..."
+
+    status=$(docker exec jupyter bash -c "
+    curl -k -s -o /dev/null -w '%{http_code}' \
+    -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
+    https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/$index_name
+    ")
+
+    if [ "$status" = "200" ]; then
+        echo "✓ $index_name already exists. Skipping."
+    else
+        echo "Creating index: $index_name..."
+
+        docker exec jupyter bash -c "
+        curl -f -k \
+        -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
+        -X PUT \
+        https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/$index_name
+        "
+
+        echo "✓ $index_name created."
+    fi
+}
+
+############################################
 # Machine Events
 ############################################
 
-echo "Uploading machine template..."
+upload_template \
+    "machine-template" \
+    "/home/jovyan/work/opensearch/templates/machine_template.json"
 
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--H "Content-Type: application/json" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/_index_template/machine-template" \
--d @/home/jovyan/work/opensearch/templates/machine_template.json
-'
-
-echo "Creating machine-events index..."
-
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/machine-events"
-'
+create_index_if_missing "machine-events"
 
 ############################################
 # Machine Aggregates
 ############################################
 
-echo "Uploading machine aggregates template..."
+upload_template \
+    "machine-aggregates-template" \
+    "/home/jovyan/work/opensearch/templates/machine_aggregates_template.json"
 
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--H "Content-Type: application/json" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/_index_template/machine-aggregates-template" \
--d @/home/jovyan/work/opensearch/templates/machine_aggregates_template.json
-'
-
-echo "Creating machine-aggregates index..."
-
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/machine-aggregates"
-'
+create_index_if_missing "machine-aggregates"
 
 ############################################
 # Worker Events
 ############################################
 
-echo "Uploading worker template..."
+upload_template \
+    "worker-template" \
+    "/home/jovyan/work/opensearch/templates/worker_template.json"
 
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--H "Content-Type: application/json" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/_index_template/worker-template" \
--d @/home/jovyan/work/opensearch/templates/worker_template.json
-'
-
-echo "Creating worker-events index..."
-
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/worker-events"
-'
+create_index_if_missing "worker-events"
 
 ############################################
 # Worker Safety
 ############################################
 
-echo "Uploading worker safety template..."
+upload_template \
+    "worker-safety-template" \
+    "/home/jovyan/work/opensearch/templates/worker_safety_template.json"
 
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--H "Content-Type: application/json" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/_index_template/worker-safety-template" \
--d @/home/jovyan/work/opensearch/templates/worker_safety_template.json
-'
-
-echo "Creating worker-safety index..."
-
-docker exec jupyter bash -c '
-curl -f -k \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
--X PUT \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/worker-safety"
-'
+create_index_if_missing "worker-safety"
 
 echo
 echo "===================================="
 echo "OpenSearch templates uploaded."
-echo "OpenSearch indices created."
+echo "OpenSearch indices are ready."
 echo "===================================="

@@ -345,13 +345,14 @@ services:
       "
     networks:
       - kafka-net
-
   grafana:
     image: grafana/grafana-oss:13.0.2
     container_name: grafana
 
     environment:
       - GF_FEATURE_TOGGLES_ENABLE=datasourceLegacyIdApi
+      - GF_INSTALL_PLUGINS=grafana-opensearch-datasource
+      - GF_PLUGINS_DISABLE_UPDATE_CHECK=true      
 
     ports:
       - "3000:3000"
@@ -359,10 +360,11 @@ services:
     restart: unless-stopped
 
     networks:
-      - kafka-net  
+      - kafka-net
+
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards        
+
 volumes:
   kafka1_data:
   kafka2_data:

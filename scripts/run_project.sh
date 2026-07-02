@@ -60,6 +60,36 @@ echo "===================================="
 
 ./scripts/opensearch_init.sh
 
+
+echo
+echo "===================================="
+echo "Starting Visualization Services..."
+echo "===================================="
+
+docker compose up -d grafana
+
+
+
+echo
+echo "Waiting for Grafana..."
+
+until docker ps --format "{{.Names}}" | grep -q "^grafana$"
+do
+    sleep 2
+
+    if docker ps -a --format "{{.Names}}" | grep -q "^grafana$"; then
+        status=$(docker inspect -f '{{.State.Status}}' grafana)
+
+        if [ "$status" = "exited" ]; then
+            echo "ERROR: Grafana failed to start."
+            docker logs grafana
+            exit 1
+        fi
+    fi
+done
+
+echo "Grafana is running."
+
 echo
 echo "===================================="
 echo "Project Started Successfully!"

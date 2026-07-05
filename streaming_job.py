@@ -5,9 +5,9 @@ from pyspark.sql.functions import to_json, struct, max
 from pyspark.sql.types import *
 import os
 
+
 spark = SparkSession.builder \
-    .master("local[*]") \
-    .appName("KafkaTest") \
+    .appName("IndustrialIoTAnalytics") \
     .config("spark.sql.session.timeZone", "UTC") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .config(
@@ -30,10 +30,12 @@ OPENSEARCH_USER = os.getenv("OPENSEARCH_USER")
 OPENSEARCH_PASSWORD = os.getenv("OPENSEARCH_PASSWORD")
 
 df = spark.readStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka1:9092,kafka2:9093,kafka3:9094") \
-    .option("subscribe", "sensor-events") \
-    .option("startingOffsets", "latest") \
+    .format("aws-kinesis") \
+    .option("kinesis.region", "us-east-1") \
+    .option("kinesis.streamName", "machine-events-stream") \
+    .option("kinesis.consumerType", "GetRecords") \
+    .option("kinesis.endpointUrl", "https://kinesis.us-east-1.amazonaws.com") \
+    .option("kinesis.startingPosition", "LATEST") \
     .load()
 
 
@@ -93,7 +95,7 @@ schema = StructType([
     )    
 ])
 
-bronze_df = df.selectExpr("CAST (value AS String)") \
+bronze_df = df.selectExpr("CAST(data AS STRING) AS value") \
     .select(from_json(col("value"), schema).alias("data")) \
     .select("data.*")
 
@@ -309,22 +311,38 @@ gold_df = gold_df.select(
 
 
 
+# def debug_batch(df, batch_id):
+#     print("=" * 80)
+#     print(f"Processing Batch {batch_id}")
 
-silver_kafka_df = silver_df.select(
-    to_json(
-        struct(*silver_df.columns)
-    ).alias("value")
-)
+# debug_query = (
+#     silver_df.writeStream
+#     .foreachBatch(debug_batch)
+#     .start()
+# )
+# print("Streaming queries:")
+# for q in spark.streams.active:
+#     print("--------------------------------")
+#     print("Name:", q.name)
+#     print("ID:", q.id)
+#     print("Status:", q.status)
+#     print("Recent progress:", q.recentProgress)
 
-silver_kafka_query = silver_kafka_df.writeStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "kafka1:9092,kafka2:9093,kafka3:9094") \
-    .option("topic", "sensor-processed") \
-    .option("checkpointLocation", "/home/jovyan/data/checkpoints/sensor_processed_kafka") \
-    .outputMode("append") \
-    .start()
+# silver_kafka_df = silver_df.select(
+#     to_json(
+#         struct(*silver_df.columns)
+#     ).alias("value")
+# )
 
-# debug_query = silver_df.writeStream \
+# silver_kafka_query = silver_kafka_df.writeStream \
+#     .format("kafka") \
+#     .option("kafka.bootstrap.servers", "kafka1:9092,kafka2:9093,kafka3:9094") \
+#     .option("topic", "sensor-processed") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/sensor_processed_kafka") \
+#     .outputMode("append") \
+#     .start()
+
+# debug_query2 = silver_df.writeStream \
 #     .format("console") \
 #     .outputMode("append") \
 #     .trigger(processingTime="2 seconds") \
@@ -343,337 +361,290 @@ bronze_s3_query = bronze_df.writeStream \
     .foreachBatch(write_bronze_to_s3) \
     .option(
         "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_bronze_s3"
+        "s3a://iot-platform-malek/checkpoints/machine_bronze_s3"
     ) \
     .start()
 
-def write_silver_to_s3(batch_df, batch_id):
+# def write_silver_to_s3(batch_df, batch_id):
 
-    batch_df.write \
-        .mode("append") \
-        .parquet(
-            "s3a://iot-platform-malek/silver/machine_silver_data/"
-        )
+#     batch_df.write \
+#         .mode("append") \
+#         .parquet(
+#             "s3a://iot-platform-malek/silver/machine_silver_data/"
+#         )
     
-silver_s3_query = silver_df.writeStream \
-    .foreachBatch(write_silver_to_s3) \
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_silver_s3"
-    ) \
-    .start()
+# silver_s3_query = silver_df.writeStream \
+#     .foreachBatch(write_silver_to_s3) \
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/machine_silver_s3"
+#     ) \
+#     .start()
 
-def write_gold_to_s3(batch_df, batch_id):
+# def write_gold_to_s3(batch_df, batch_id):
 
-    batch_df.select(
-        col("machine_id"),
-        col("window_start"),
-        col("window_end"),
-        col("avg_temp"),
-        col("avg_rpm"),
-        col("avg_vibration"),
-        col("avg_power"),
-        col("avg_health_score"),
-        col("min_health_score"),
-        col("fault_count"),
-        col("fault_percentage"),
-        col("total_events"),
-        col("max_temp"),
-        col("max_vibration"),
-        col("peak_power"),
-        col("avg_risk_score"),
-        col("uptime_percentage"),
+#     batch_df.select(
+#         col("machine_id"),
+#         col("window_start"),
+#         col("window_end"),
+#         col("avg_temp"),
+#         col("avg_rpm"),
+#         col("avg_vibration"),
+#         col("avg_power"),
+#         col("avg_health_score"),
+#         col("min_health_score"),
+#         col("fault_count"),
+#         col("fault_percentage"),
+#         col("total_events"),
+#         col("max_temp"),
+#         col("max_vibration"),
+#         col("peak_power"),
+#         col("avg_risk_score"),
+#         col("uptime_percentage"),
                                       
-    ).write \
-     .mode("append") \
-     .parquet(
-         "s3a://iot-platform-malek/gold/machine_gold_data/"
-     )
+#     ).write \
+#      .mode("append") \
+#      .parquet(
+#          "s3a://iot-platform-malek/gold/machine_gold_data/"
+#      )
     
 
 
 
 
 
-gold_s3_query = gold_df.writeStream \
-    .foreachBatch(write_gold_to_s3) \
-    .outputMode("update") \
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_gold_s3"
-    ) \
-    .start()
+# gold_s3_query = gold_df.writeStream \
+#     .foreachBatch(write_gold_to_s3) \
+#     .outputMode("update") \
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
+#     ) \
+#     .start()
+# print("Streaming queries:")
+# for q in spark.streams.active:
+#     print("--------------------------------")
+#     print("Name:", q.name)
+#     print("ID:", q.id)
+#     print("Status:", q.status)
+#     print("Recent progress:", q.recentProgress)
+
+
+
+# def write_quarantine_to_postgres(
+#     batch_df,
+#     batch_id
+# ):
+#     try:
+
+#         missing = []
+
+#         for c in [
+#             "event_id",
+#             "timestamp",
+#             "machine_id",
+#             "machine_type",
+#             "floor",
+#             "shift",
+#             "status",
+#             "error_code",
+#             "is_fault",
+#             "temperature",
+#             "vibration",
+#             "rpm",
+#             "power_kw",
+#             "cnc_oil",
+#             "coolant_pressure",
+#             "joint_torque",
+#             "force",
+#             "belt_tension",
+#             "load_weight",
+#             "flow_rate",
+#             "inlet_pressure",
+#             "validation_reason"
+#         ]:
+#             if c not in batch_df.columns:
+#                 missing.append(c)
+
+#         print("MISSING COLUMNS:", missing)    
+#         print("===== QUARANTINE BATCH =====")
+#         print(batch_df.columns)
+#         # invalid_count = batch_df.count()
+
+#         batch_df.select(
+#             "event_id",
+#             "timestamp",
+#             "machine_id",
+#             "machine_type",
+#             "floor",
+#             "shift",
+#             "status",
+#             "error_code",
+#             "is_fault",
+#             "temperature",
+#             "vibration",
+#             "rpm",
+#             "power_kw",
+#             "cnc_oil",
+#             "coolant_pressure",
+#             "joint_torque",
+#             "force",
+#             "belt_tension",
+#             "load_weight",
+#             "flow_rate",
+#             "inlet_pressure",
+#             "validation_reason"
+#             ).write \
+#             .format("jdbc") \
+#             .option("url", "jdbc:postgresql://postgres:5432/db") \
+#             .option("dbtable", "machine_events_quarantine") \
+#             .option("user", "user") \
+#             .option("password", "password") \
+#             .option("driver", "org.postgresql.Driver") \
+#             .mode("append") \
+#             .save()
+
+#         # print(
+#         #     f"[QUALITY] Batch {batch_id}"
+#         #     f" Invalid Records = {invalid_count}"
+#         # )
+#     except Exception as e:
+#         print("QUARANTINE ERROR:")
+#         print(str(e))
+#         raise        
+
+# invalid_query = (
+#     invalid_df.writeStream
+#     .foreachBatch(write_quarantine_to_postgres)
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/quarantine"
+#     )
+#     .start()
+# )    
 
 
 
 
-def write_quarantine_to_postgres(
-    batch_df,
-    batch_id
-):
-    try:
 
-        missing = []
+# def write_bronze_to_postgres(batch_df, batch_id):
 
-        for c in [
-            "event_id",
-            "timestamp",
-            "machine_id",
-            "machine_type",
-            "floor",
-            "shift",
-            "status",
-            "error_code",
-            "is_fault",
-            "temperature",
-            "vibration",
-            "rpm",
-            "power_kw",
-            "cnc_oil",
-            "coolant_pressure",
-            "joint_torque",
-            "force",
-            "belt_tension",
-            "load_weight",
-            "flow_rate",
-            "inlet_pressure",
-            "validation_reason"
-        ]:
-            if c not in batch_df.columns:
-                missing.append(c)
+#     print(f"[BRONZE] Batch {batch_id}")
 
-        print("MISSING COLUMNS:", missing)    
-        print("===== QUARANTINE BATCH =====")
-        print(batch_df.columns)
-        # invalid_count = batch_df.count()
+#     batch_df.select(
+#         "event_id",
+#         "timestamp",
+#         "machine_id",
+#         "machine_type",
+#         "floor",
+#         "shift",
+#         "status",
+#         "error_code",
+#         "is_fault",
 
-        batch_df.select(
-            "event_id",
-            "timestamp",
-            "machine_id",
-            "machine_type",
-            "floor",
-            "shift",
-            "status",
-            "error_code",
-            "is_fault",
-            "temperature",
-            "vibration",
-            "rpm",
-            "power_kw",
-            "cnc_oil",
-            "coolant_pressure",
-            "joint_torque",
-            "force",
-            "belt_tension",
-            "load_weight",
-            "flow_rate",
-            "inlet_pressure",
-            "validation_reason"
-            ).write \
-            .format("jdbc") \
-            .option("url", "jdbc:postgresql://postgres:5432/db") \
-            .option("dbtable", "machine_events_quarantine") \
-            .option("user", "user") \
-            .option("password", "password") \
-            .option("driver", "org.postgresql.Driver") \
-            .mode("append") \
-            .save()
+#         "temperature",
+#         "vibration",
+#         "rpm",
+#         "power_kw",
 
-        # print(
-        #     f"[QUALITY] Batch {batch_id}"
-        #     f" Invalid Records = {invalid_count}"
-        # )
-    except Exception as e:
-        print("QUARANTINE ERROR:")
-        print(str(e))
-        raise        
+#         "cnc_oil",
+#         "coolant_pressure",
 
-invalid_query = (
-    invalid_df.writeStream
-    .foreachBatch(write_quarantine_to_postgres)
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/quarantine"
-    )
-    .start()
-)    
+#         "joint_torque",
+#         "force",
 
+#         "belt_tension",
+#         "load_weight",
 
-
-
-
-def write_bronze_to_postgres(batch_df, batch_id):
-
-    print(f"[BRONZE] Batch {batch_id}")
-
-    batch_df.select(
-        "event_id",
-        "timestamp",
-        "machine_id",
-        "machine_type",
-        "floor",
-        "shift",
-        "status",
-        "error_code",
-        "is_fault",
-
-        "temperature",
-        "vibration",
-        "rpm",
-        "power_kw",
-
-        "cnc_oil",
-        "coolant_pressure",
-
-        "joint_torque",
-        "force",
-
-        "belt_tension",
-        "load_weight",
-
-        "flow_rate",
-        "inlet_pressure"
-    ).write \
-        .format("jdbc") \
-        .option("url", "jdbc:postgresql://postgres:5432/db") \
-        .option("dbtable", "machine_events_bronze") \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option("driver", "org.postgresql.Driver") \
-        .mode("append") \
-        .save()
+#         "flow_rate",
+#         "inlet_pressure"
+#     ).write \
+#         .format("jdbc") \
+#         .option("url", "jdbc:postgresql://postgres:5432/db") \
+#         .option("dbtable", "machine_events_bronze") \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option("driver", "org.postgresql.Driver") \
+#         .mode("append") \
+#         .save()
     
 
-bronze_postgres_query = bronze_df.writeStream \
-    .foreachBatch(write_bronze_to_postgres) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "/home/jovyan/data/checkpoints/machine_bronze_postgres") \
-    .start()
+# bronze_postgres_query = bronze_df.writeStream \
+#     .foreachBatch(write_bronze_to_postgres) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_postgres") \
+#     .start()
 
-def write_silver_to_postgres(batch_df, batch_id):
+# def write_silver_to_postgres(batch_df, batch_id):
 
-    print(f"[POSTGRES] Batch {batch_id}")
+#     print(f"[POSTGRES] Batch {batch_id}")
 
-    batch_df.select(
-        "event_id",
-        "timestamp",
-        "machine_id",
-        "machine_type",
-        "floor",
-        "shift",
-        "status",
-        "error_code",
-        "is_fault",
+#     batch_df.select(
+#         "event_id",
+#         "timestamp",
+#         "machine_id",
+#         "machine_type",
+#         "floor",
+#         "shift",
+#         "status",
+#         "error_code",
+#         "is_fault",
 
-        "temperature",
-        "vibration",
-        "rpm",
-        "power_kw",
-        "power_status",
+#         "temperature",
+#         "vibration",
+#         "rpm",
+#         "power_kw",
+#         "power_status",
         
 
-        "cnc_oil",
-        "coolant_pressure",
+#         "cnc_oil",
+#         "coolant_pressure",
 
-        "joint_torque",
-        "force",
+#         "joint_torque",
+#         "force",
 
-        "belt_tension",
-        "load_weight",
+#         "belt_tension",
+#         "load_weight",
 
-        "flow_rate",
-        "inlet_pressure",
+#         "flow_rate",
+#         "inlet_pressure",
 
-        "temperature_status",
-        "vibration_status",
+#         "temperature_status",
+#         "vibration_status",
 
-        "running_flag",
+#         "running_flag",
         
-        "fault_flag",
-        "fault_category",
-        "event_date",
-        "event_hour",
-        "time_bucket",
+#         "fault_flag",
+#         "fault_category",
+#         "event_date",
+#         "event_hour",
+#         "time_bucket",
         
 
-        "health_score",
+#         "health_score",
         
-        "risk_score",
+#         "risk_score",
 
-        "anomaly_flag"
+#         "anomaly_flag"
 
         
-    ).write \
-        .format("jdbc") \
-        .option("url", "jdbc:postgresql://postgres:5432/db") \
-        .option("dbtable", "machine_events_silver") \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option("driver", "org.postgresql.Driver") \
-        .mode("append") \
-        .save()
+#     ).write \
+#         .format("jdbc") \
+#         .option("url", "jdbc:postgresql://postgres:5432/db") \
+#         .option("dbtable", "machine_events_silver") \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option("driver", "org.postgresql.Driver") \
+#         .mode("append") \
+#         .save()
 
 
 
-silver_postgres_query = silver_df.writeStream \
-    .foreachBatch(write_silver_to_postgres) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "/home/jovyan/data/checkpoints/machine_silver_postgres") \
-    .start()
-
-
-
-
-
-
-
-
-def write_gold_to_postgres(batch_df, batch_id):
-
-
-    print(f"[AGG] Batch {batch_id}")
-
-
-
-    batch_df = batch_df.select(
-        col("machine_id"),
-        col("window_start"),
-        col("window_end"),
-        col("avg_temp"),
-        col("avg_rpm"),
-        col("avg_vibration"),
-        col("avg_power"),
-        col("avg_health_score"),
-        col("min_health_score"),
-        col("fault_count"),
-        col("fault_percentage"),
-        col("total_events"),
-        col("max_temp"),
-        col("max_vibration"),
-        col("peak_power"),
-        col("avg_risk_score"),
-        col("uptime_percentage"),        
-
-    )
-
-    batch_df.write \
-        .format("jdbc") \
-        .option("url", "jdbc:postgresql://postgres:5432/db") \
-        .option("dbtable", "machine_aggregates_gold") \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option("driver", "org.postgresql.Driver") \
-        .mode("append") \
-        .save()
-
-
-gold_postgres_query = gold_df.writeStream \
-    .outputMode("update") \
-    .foreachBatch(write_gold_to_postgres) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "/home/jovyan/data/checkpoints/machine_gold_postgres") \
-    .start()
+# silver_postgres_query = silver_df.writeStream \
+#     .foreachBatch(write_silver_to_postgres) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_postgres") \
+#     .start()
 
 
 
@@ -682,78 +653,137 @@ gold_postgres_query = gold_df.writeStream \
 
 
 
-def write_silver_to_es(batch_df, batch_id):
-    try:    
-        batch_df.write \
-            .format("opensearch") \
-            .option("opensearch.nodes", OPENSEARCH_HOST) \
-            .option("opensearch.port", OPENSEARCH_PORT) \
-            .option("opensearch.net.ssl", "true") \
-            .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-            .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-            .option("opensearch.nodes.wan.only", "true") \
-            .option("opensearch.index.auto.create", "true") \
-            .mode("append") \
-            .save("machine-events")
-    except Exception as e:
-        print(f"[FATAL] Elasticsearch write failed: {e}")
-        raise e    
+# def write_gold_to_postgres(batch_df, batch_id):
+
+
+#     print(f"[AGG] Batch {batch_id}")
 
 
 
-silver_elastic_query = silver_df.writeStream \
-    .foreachBatch(write_silver_to_es) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "/home/jovyan/data/checkpoints/machine_silver_elastic") \
-    .start()
+#     batch_df = batch_df.select(
+#         col("machine_id"),
+#         col("window_start"),
+#         col("window_end"),
+#         col("avg_temp"),
+#         col("avg_rpm"),
+#         col("avg_vibration"),
+#         col("avg_power"),
+#         col("avg_health_score"),
+#         col("min_health_score"),
+#         col("fault_count"),
+#         col("fault_percentage"),
+#         col("total_events"),
+#         col("max_temp"),
+#         col("max_vibration"),
+#         col("peak_power"),
+#         col("avg_risk_score"),
+#         col("uptime_percentage"),        
+
+#     )
+
+#     batch_df.write \
+#         .format("jdbc") \
+#         .option("url", "jdbc:postgresql://postgres:5432/db") \
+#         .option("dbtable", "machine_aggregates_gold") \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option("driver", "org.postgresql.Driver") \
+#         .mode("append") \
+#         .save()
 
 
-def write_gold_to_es(batch_df, batch_id):
-    try:
-        batch_df.select(
-            col("machine_id"),
-            col("window_start"),
-            col("window_end"),
-            col("avg_temp"),
-            col("avg_rpm"),
-            col("avg_vibration"),
-            col("avg_power"),
-            col("avg_health_score"),
-            col("min_health_score"),
-            col("fault_count"),
-            col("fault_percentage"),
-            col("total_events"),
-            col("max_temp"),
-            col("max_vibration"),
-            col("peak_power"),
-            col("avg_risk_score"),
-            col("uptime_percentage")          
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save("machine-aggregates")
-    except Exception as e:
-        print(f"[FATAL] Elasticsearch write failed: {e}")
-        raise e
+# gold_postgres_query = gold_df.writeStream \
+#     .outputMode("update") \
+#     .foreachBatch(write_gold_to_postgres) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_postgres") \
+#     .start()
 
 
 
 
-gold_elastic_query = gold_df.writeStream \
-    .foreachBatch(write_gold_to_es) \
-    .outputMode("update") \
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/machine_gold_elastic"
-    ) \
-    .start()
+
+
+
+
+# def write_silver_to_es(batch_df, batch_id):
+#     try:    
+#         batch_df.write \
+#             .format("opensearch") \
+#             .option("opensearch.nodes", OPENSEARCH_HOST) \
+#             .option("opensearch.port", OPENSEARCH_PORT) \
+#             .option("opensearch.net.ssl", "true") \
+#             .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#             .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#             .option("opensearch.nodes.wan.only", "true") \
+#             .option("opensearch.index.auto.create", "true") \
+#             .mode("append") \
+#             .save("machine-events")
+#     except Exception as e:
+#         print(f"[FATAL] Elasticsearch write failed: {e}")
+#         raise e    
+
+
+
+# silver_elastic_query = silver_df.writeStream \
+#     .foreachBatch(write_silver_to_es) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_elastic") \
+#     .start()
+# print("Streaming queries:")
+# for q in spark.streams.active:
+#     print("--------------------------------")
+#     print("Name:", q.name)
+#     print("ID:", q.id)
+#     print("Status:", q.status)
+#     print("Recent progress:", q.recentProgress)
+
+# def write_gold_to_es(batch_df, batch_id):
+#     try:
+#         batch_df.select(
+#             col("machine_id"),
+#             col("window_start"),
+#             col("window_end"),
+#             col("avg_temp"),
+#             col("avg_rpm"),
+#             col("avg_vibration"),
+#             col("avg_power"),
+#             col("avg_health_score"),
+#             col("min_health_score"),
+#             col("fault_count"),
+#             col("fault_percentage"),
+#             col("total_events"),
+#             col("max_temp"),
+#             col("max_vibration"),
+#             col("peak_power"),
+#             col("avg_risk_score"),
+#             col("uptime_percentage")          
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save("machine-aggregates")
+#     except Exception as e:
+#         print(f"[FATAL] Elasticsearch write failed: {e}")
+#         raise e
+
+
+
+
+# gold_elastic_query = gold_df.writeStream \
+#     .foreachBatch(write_gold_to_es) \
+#     .outputMode("update") \
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/machine_gold_elastic"
+#     ) \
+#     .start()
 
 
 
@@ -821,21 +851,18 @@ worker_schema = StructType([
 
 worker_raw_df = (
     spark.readStream
-    .format("kafka")
-    .option(
-        "kafka.bootstrap.servers",
-        "kafka1:9092,kafka2:9093,kafka3:9094"
-    )
-    .option(
-        "subscribe",
-        "worker-events"
-    )
+    .format("aws-kinesis")
+    .option("kinesis.region", "us-east-1")
+    .option("kinesis.streamName", "worker-events-stream")
+    .option("kinesis.consumerType", "GetRecords")
+    .option("kinesis.endpointUrl", "https://kinesis.us-east-1.amazonaws.com")
+    .option("kinesis.startingPosition", "LATEST")
     .load()
 )
 
 worker_bronze_df = (
     worker_raw_df
-    .selectExpr("CAST(value AS STRING)")
+    .selectExpr("CAST(data AS STRING) AS value")
     .select(
         from_json(
             col("value"),
@@ -1038,413 +1065,419 @@ worker_gold_df = (
     )
 )
 
-def write_worker_quarantine_to_postgres(
-    batch_df,
-    batch_id
-):
+# def write_worker_quarantine_to_postgres(
+#     batch_df,
+#     batch_id
+# ):
 
-    batch_df.select(
-        "worker_id",
-        "timestamp",
-        "floor",
-        "zone_id",
-        "helmet_on",
-        "safety_vest_on",
-        "heart_rate",
-        "movement_status",
-        "danger_zone",
-        "fatigue_score",
-        "validation_reason"
-    ).write \
-        .format("jdbc") \
-        .option(
-            "url",
-            "jdbc:postgresql://postgres:5432/db"
-        ) \
-        .option(
-            "dbtable",
-            "worker_events_quarantine"
-        ) \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option(
-            "driver",
-            "org.postgresql.Driver"
-        ) \
-        .mode("append") \
-        .save()
+#     batch_df.select(
+#         "worker_id",
+#         "timestamp",
+#         "floor",
+#         "zone_id",
+#         "helmet_on",
+#         "safety_vest_on",
+#         "heart_rate",
+#         "movement_status",
+#         "danger_zone",
+#         "fatigue_score",
+#         "validation_reason"
+#     ).write \
+#         .format("jdbc") \
+#         .option(
+#             "url",
+#             "jdbc:postgresql://postgres:5432/db"
+#         ) \
+#         .option(
+#             "dbtable",
+#             "worker_events_quarantine"
+#         ) \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option(
+#             "driver",
+#             "org.postgresql.Driver"
+#         ) \
+#         .mode("append") \
+#         .save()
     
-worker_invalid_query = (
-    worker_invalid_df
-    .writeStream
-    .foreachBatch(
-        write_worker_quarantine_to_postgres
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_quarantine"
-    )
-    .start()
-)    
+# worker_invalid_query = (
+#     worker_invalid_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_quarantine_to_postgres
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_quarantine"
+#     )
+#     .start()
+# )    
 
-def write_worker_bronze_to_postgres(
-    batch_df,
-    batch_id
-):
+# def write_worker_bronze_to_postgres(
+#     batch_df,
+#     batch_id
+# ):
 
-    print(
-        f"[WORKER BRONZE] Batch {batch_id}"
-    )
+#     print(
+#         f"[WORKER BRONZE] Batch {batch_id}"
+#     )
 
-    batch_df.select(
-        "worker_id",
-        "timestamp",
-        "floor",
-        "zone_id",
-        "helmet_on",
-        "safety_vest_on",
-        "heart_rate",
-        "movement_status",
-        "danger_zone",
-        "fatigue_score"
-    ).write \
-        .format("jdbc") \
-        .option(
-            "url",
-            "jdbc:postgresql://postgres:5432/db"
-        ) \
-        .option(
-            "dbtable",
-            "worker_events_bronze"
-        ) \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option(
-            "driver",
-            "org.postgresql.Driver"
-        ) \
-        .mode("append") \
-        .save()
-    
-
-worker_bronze_postgres_query = (
-    worker_bronze_df
-    .writeStream
-    .foreachBatch(
-        write_worker_bronze_to_postgres
-    )
-    .trigger(
-        processingTime="2 seconds"
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_bronze_postgres"
-    )
-    .start()
-)
-
-
-def write_worker_silver_to_postgres(
-    batch_df,
-    batch_id
-):
-
-    print(
-        f"[WORKER SILVER] Batch {batch_id}"
-    )
-
-    batch_df.select(
-        "worker_id",
-        "timestamp",
-        "floor",
-        "zone_id",
-        "helmet_on",
-        "safety_vest_on",
-        "heart_rate",
-        "heart_rate_status",
-        "movement_status",
-        "danger_zone",
-        "fatigue_score",
-        "safety_violation_flag",
-        "fatigue_status",
-        "worker_risk_level",
-        "alert_level"
-    ).write \
-        .format("jdbc") \
-        .option(
-            "url",
-            "jdbc:postgresql://postgres:5432/db"
-        ) \
-        .option(
-            "dbtable",
-            "worker_events_silver"
-        ) \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option(
-            "driver",
-            "org.postgresql.Driver"
-        ) \
-        .mode("append") \
-        .save()
+#     batch_df.select(
+#         "worker_id",
+#         "timestamp",
+#         "floor",
+#         "zone_id",
+#         "helmet_on",
+#         "safety_vest_on",
+#         "heart_rate",
+#         "movement_status",
+#         "danger_zone",
+#         "fatigue_score"
+#     ).write \
+#         .format("jdbc") \
+#         .option(
+#             "url",
+#             "jdbc:postgresql://postgres:5432/db"
+#         ) \
+#         .option(
+#             "dbtable",
+#             "worker_events_bronze"
+#         ) \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option(
+#             "driver",
+#             "org.postgresql.Driver"
+#         ) \
+#         .mode("append") \
+#         .save()
     
 
-worker_silver_postgres_query = (
-    worker_silver_df
-    .writeStream
-    .foreachBatch(
-        write_worker_silver_to_postgres
-    )
-    .trigger(
-        processingTime="2 seconds"
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_silver_postgres"
-    )
-    .start()
-)
+# worker_bronze_postgres_query = (
+#     worker_bronze_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_bronze_to_postgres
+#     )
+#     .trigger(
+#         processingTime="2 seconds"
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_bronze_postgres"
+#     )
+#     .start()
+# )
 
 
+# def write_worker_silver_to_postgres(
+#     batch_df,
+#     batch_id
+# ):
 
+#     print(
+#         f"[WORKER SILVER] Batch {batch_id}"
+#     )
 
-def write_worker_gold_to_postgres(
-    batch_df,
-    batch_id
-):
-
-    print(
-        f"[WORKER GOLD] Batch {batch_id}"
-    )
-
-    batch_df.write \
-        .format("jdbc") \
-        .option(
-            "url",
-            "jdbc:postgresql://postgres:5432/db"
-        ) \
-        .option(
-            "dbtable",
-            "worker_safety_gold"
-        ) \
-        .option("user", "user") \
-        .option("password", "password") \
-        .option(
-            "driver",
-            "org.postgresql.Driver"
-        ) \
-        .mode("append") \
-        .save()
-    
-worker_gold_postgres_query = (
-    worker_gold_df
-    .writeStream
-    .outputMode("update")
-    .foreachBatch(
-        write_worker_gold_to_postgres
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_gold_postgres"
-    )
-    .start()
-)
-
-
-def write_worker_bronze_to_s3(
-    batch_df,
-    batch_id
-):
-
-    batch_df.write \
-        .mode("append") \
-        .parquet(
-            "s3a://iot-platform-malek/bronze/worker_bronze_data/"
-        )
-worker_bronze_s3_query = (
-    worker_bronze_df
-    .writeStream
-    .foreachBatch(
-        write_worker_bronze_to_s3
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_bronze_s3"
-    )
-    .start()
-)
-
-
-
-def write_worker_silver_to_s3(
-    batch_df,
-    batch_id
-):
-
-    batch_df.write \
-        .mode("append") \
-        .parquet(
-            "s3a://iot-platform-malek/silver/worker_silver_data/"
-        )
-worker_silver_s3_query = (
-    worker_silver_df
-    .writeStream
-    .foreachBatch(
-        write_worker_silver_to_s3
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_silver_s3"
-    )
-    .start()
-)
-
-def write_worker_gold_to_s3(
-    batch_df,
-    batch_id
-):
-
-    batch_df.select(
-        "worker_id",
-        "window_start",
-        "window_end",
-        "violations_per_window",
-        "workers_in_danger_zone",
-        "avg_fatigue_score"
-    ).write \
-     .mode("append") \
-     .parquet(
-         "s3a://iot-platform-malek/gold/worker_gold_data/"
-     )
-    
-worker_gold_s3_query = (
-    worker_gold_df
-    .writeStream
-    .outputMode("update")
-    .foreachBatch(
-        write_worker_gold_to_s3
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_gold_s3"
-    )
-    .start()
-)    
-
-
-
-
-
-def write_worker_silver_to_es(
-    batch_df,
-    batch_id
-):
-    try:
-
-        batch_df.select(
-            "worker_id",
-            "timestamp",
-            "floor",
-            "zone_id",
-            "helmet_on",
-            "safety_vest_on",
-            "heart_rate",
-            "heart_rate_status",
-            "movement_status",
-            "danger_zone",
-            "fatigue_score",
-            "safety_violation_flag",
-            "fatigue_status",
-            "worker_risk_level",
-            "alert_level"
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save(
-            "worker-events"
-        )
-
-    except Exception as e:
-
-        print(
-            f"[FATAL] Worker ES write failed: {e}"
-        )
-
-        raise e
+#     batch_df.select(
+#         "worker_id",
+#         "timestamp",
+#         "floor",
+#         "zone_id",
+#         "helmet_on",
+#         "safety_vest_on",
+#         "heart_rate",
+#         "heart_rate_status",
+#         "movement_status",
+#         "danger_zone",
+#         "fatigue_score",
+#         "safety_violation_flag",
+#         "fatigue_status",
+#         "worker_risk_level",
+#         "alert_level"
+#     ).write \
+#         .format("jdbc") \
+#         .option(
+#             "url",
+#             "jdbc:postgresql://postgres:5432/db"
+#         ) \
+#         .option(
+#             "dbtable",
+#             "worker_events_silver"
+#         ) \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option(
+#             "driver",
+#             "org.postgresql.Driver"
+#         ) \
+#         .mode("append") \
+#         .save()
     
 
-worker_silver_elastic_query = (
-    worker_silver_df
-    .writeStream
-    .foreachBatch(
-        write_worker_silver_to_es
-    )
-    .trigger(
-        processingTime="2 seconds"
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_silver_elastic"
-    )
-    .start()
-)
+# worker_silver_postgres_query = (
+#     worker_silver_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_silver_to_postgres
+#     )
+#     .trigger(
+#         processingTime="2 seconds"
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_silver_postgres"
+#     )
+#     .start()
+# )
 
 
-def write_worker_gold_to_es(
-    batch_df,
-    batch_id
-):
-    try:
 
-        batch_df.select(
-            "worker_id",
-            "window_start",
-            "window_end",
-            "violations_per_window",
-            "workers_in_danger_zone",
-            "avg_fatigue_score"
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save(
-            "worker-safety"
-        )
 
-    except Exception as e:
+# def write_worker_gold_to_postgres(
+#     batch_df,
+#     batch_id
+# ):
 
-        print(
-            f"[FATAL] Worker Gold ES write failed: {e}"
-        )
+#     print(
+#         f"[WORKER GOLD] Batch {batch_id}"
+#     )
 
-        raise e
+#     batch_df.write \
+#         .format("jdbc") \
+#         .option(
+#             "url",
+#             "jdbc:postgresql://postgres:5432/db"
+#         ) \
+#         .option(
+#             "dbtable",
+#             "worker_safety_gold"
+#         ) \
+#         .option("user", "user") \
+#         .option("password", "password") \
+#         .option(
+#             "driver",
+#             "org.postgresql.Driver"
+#         ) \
+#         .mode("append") \
+#         .save()
     
-worker_gold_elastic_query = (
-    worker_gold_df
-    .writeStream
-    .outputMode("update")
-    .foreachBatch(
-        write_worker_gold_to_es
-    )
-    .option(
-        "checkpointLocation",
-        "/home/jovyan/data/checkpoints/worker_gold_elastic"
-    )
-    .start()
-)    
+# worker_gold_postgres_query = (
+#     worker_gold_df
+#     .writeStream
+#     .outputMode("update")
+#     .foreachBatch(
+#         write_worker_gold_to_postgres
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_gold_postgres"
+#     )
+#     .start()
+# )
+
+
+# def write_worker_bronze_to_s3(
+#     batch_df,
+#     batch_id
+# ):
+
+#     batch_df.write \
+#         .mode("append") \
+#         .parquet(
+#             "s3a://iot-platform-malek/bronze/worker_bronze_data/"
+#         )
+# worker_bronze_s3_query = (
+#     worker_bronze_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_bronze_to_s3
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_bronze_s3"
+#     )
+#     .start()
+# )
+
+
+
+# def write_worker_silver_to_s3(
+#     batch_df,
+#     batch_id
+# ):
+
+#     batch_df.write \
+#         .mode("append") \
+#         .parquet(
+#             "s3a://iot-platform-malek/silver/worker_silver_data/"
+#         )
+# worker_silver_s3_query = (
+#     worker_silver_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_silver_to_s3
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_silver_s3"
+#     )
+#     .start()
+# )
+
+# def write_worker_gold_to_s3(
+#     batch_df,
+#     batch_id
+# ):
+
+#     batch_df.select(
+#         "worker_id",
+#         "window_start",
+#         "window_end",
+#         "violations_per_window",
+#         "workers_in_danger_zone",
+#         "avg_fatigue_score"
+#     ).write \
+#      .mode("append") \
+#      .parquet(
+#          "s3a://iot-platform-malek/gold/worker_gold_data/"
+#      )
+    
+# worker_gold_s3_query = (
+#     worker_gold_df
+#     .writeStream
+#     .outputMode("update")
+#     .foreachBatch(
+#         write_worker_gold_to_s3
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_gold_s3"
+#     )
+#     .start()
+# )    
+# print("Streaming queries:")
+# for q in spark.streams.active:
+#     print("--------------------------------")
+#     print("Name:", q.name)
+#     print("ID:", q.id)
+#     print("Status:", q.status)
+#     print("Recent progress:", q.recentProgress)
+
+
+
+
+# def write_worker_silver_to_es(
+#     batch_df,
+#     batch_id
+# ):
+#     try:
+
+#         batch_df.select(
+#             "worker_id",
+#             "timestamp",
+#             "floor",
+#             "zone_id",
+#             "helmet_on",
+#             "safety_vest_on",
+#             "heart_rate",
+#             "heart_rate_status",
+#             "movement_status",
+#             "danger_zone",
+#             "fatigue_score",
+#             "safety_violation_flag",
+#             "fatigue_status",
+#             "worker_risk_level",
+#             "alert_level"
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save(
+#             "worker-events"
+#         )
+
+#     except Exception as e:
+
+#         print(
+#             f"[FATAL] Worker ES write failed: {e}"
+#         )
+
+#         raise e
+    
+
+# worker_silver_elastic_query = (
+#     worker_silver_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_silver_to_es
+#     )
+#     .trigger(
+#         processingTime="2 seconds"
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_silver_elastic"
+#     )
+#     .start()
+# )
+
+
+# def write_worker_gold_to_es(
+#     batch_df,
+#     batch_id
+# ):
+#     try:
+
+#         batch_df.select(
+#             "worker_id",
+#             "window_start",
+#             "window_end",
+#             "violations_per_window",
+#             "workers_in_danger_zone",
+#             "avg_fatigue_score"
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save(
+#             "worker-safety"
+#         )
+
+#     except Exception as e:
+
+#         print(
+#             f"[FATAL] Worker Gold ES write failed: {e}"
+#         )
+
+#         raise e
+    
+# worker_gold_elastic_query = (
+#     worker_gold_df
+#     .writeStream
+#     .outputMode("update")
+#     .foreachBatch(
+#         write_worker_gold_to_es
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_gold_elastic"
+#     )
+#     .start()
+# )    
 
 
 

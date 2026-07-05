@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from itertools import cycle
 
-from kafka import KafkaProducer
+import boto3
 
 
 
@@ -95,19 +95,8 @@ def generate_worker_event(worker):
         "fatigue_score": fatigue
     }
 
-producer = KafkaProducer(
-    bootstrap_servers=[
-        "localhost:19092",
-        "localhost:19093",
-        "localhost:19094"
-    ],
 
-    value_serializer=lambda v:
-        json.dumps(v).encode("utf-8"),
-
-    key_serializer=lambda k:
-        k.encode("utf-8")
-)
+kinesis = boto3.client("kinesis")
 
 worker_cycle = cycle(WORKERS)
 
@@ -117,10 +106,10 @@ while True:
 
     event = generate_worker_event(worker)
 
-    producer.send(
-        "worker-events",
-        key=event["worker_id"] or "UNKNOWN",
-        value=event
+    kinesis.put_record(
+        StreamName="worker-events-stream",
+        Data=json.dumps(event),
+        PartitionKey=event["worker_id"] or "UNKNOWN"
     )
 
     print(event)

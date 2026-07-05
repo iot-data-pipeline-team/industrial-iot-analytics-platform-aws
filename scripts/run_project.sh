@@ -2,95 +2,53 @@
 
 set -e
 
+############################################
+# Load Environment Variables
+############################################
+
+set -a
+source .env
+set +a
+
 echo "===================================="
-echo "Starting infrastructure services..."
+echo "Industrial IoT Analytics Platform"
+echo "AWS Cloud Version"
 echo "===================================="
 
-docker compose up -d \
-    zookeeper \
-    kafka1 \
-    kafka2 \
-    kafka3 \
-    postgres \
-    minio
+############################################
+# Initialize OpenSearch
+############################################
 
 echo
-echo "===================================="
-echo "Running initialization jobs..."
-echo "===================================="
-
-docker compose run --rm kafka-init
-
-docker compose run --rm minio-init
-
-echo
-echo "===================================="
-echo "Starting Kafka UI..."
-echo "===================================="
-
-docker compose up -d kafka-ui
-
-echo
-echo "===================================="
-echo "Starting Spark and Jupyter..."
-echo "===================================="
-
-docker compose up -d \
-    spark-master \
-    spark-worker \
-    jupyter
-
-echo
-echo "Waiting for Jupyter..."
-
-until docker exec jupyter ls >/dev/null 2>&1
-do
-    echo "Waiting for Jupyter container..."
-    sleep 2
-done
-
-echo "Jupyter is ready."
+echo "Initializing OpenSearch..."
 
 
+chmod +x scripts/*.sh
 
-echo
-echo "===================================="
-echo "Uploading OpenSearch templates..."
-echo "===================================="
 
 ./scripts/opensearch_init.sh
 
+############################################
+# Start Spark
+############################################
+
+echo
+echo "Starting Spark Streaming..."
+
+./scripts/run_spark.sh
 
 echo
 echo "===================================="
-echo "Starting Visualization Services..."
+echo "Platform Started Successfully!"
 echo "===================================="
-
-docker compose up -d grafana
-
-
 
 echo
-echo "Waiting for Grafana..."
-
-until docker ps --format "{{.Names}}" | grep -q "^grafana$"
-do
-    sleep 2
-
-    if docker ps -a --format "{{.Names}}" | grep -q "^grafana$"; then
-        status=$(docker inspect -f '{{.State.Status}}' grafana)
-
-        if [ "$status" = "exited" ]; then
-            echo "ERROR: Grafana failed to start."
-            docker logs grafana
-            exit 1
-        fi
-    fi
-done
-
-echo "Grafana is running."
-
+echo "Open two new terminals and run:"
 echo
-echo "===================================="
-echo "Project Started Successfully!"
-echo "===================================="
+echo "  ./scripts/run_machine_producer.sh"
+echo "  ./scripts/run_worker_producer.sh"
+echo
+echo "Then verify:"
+echo "  • S3"
+echo "  • OpenSearch"
+echo "  • Grafana"

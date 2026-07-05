@@ -2,15 +2,8 @@
 
 set -e
 
-source venv/bin/activate
-
-
-
 echo "===================================="
 echo "Starting Worker Producer..."
 echo "===================================="
 
-venv/bin/python producer/worker_producer.py 
-
-
-
+python3 producer/worker_producer.py

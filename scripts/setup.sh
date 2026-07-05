@@ -14,42 +14,18 @@ if ! command -v python3 >/dev/null 2>&1; then
     exit 1
 fi
 
-echo
-echo "Installing python3-venv..."
-
-sudo apt update
-sudo apt install -y python3-venv
-
-echo
-echo "Creating virtual environment..."
-
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
-    echo "Virtual environment created."
-else
-    echo "Virtual environment already exists."
-fi
-
-echo
-echo "Activating virtual environment..."
-
-source venv/bin/activate
+echo "✓ Python found."
 
 echo
 echo "Installing Python dependencies..."
 
-pip install --upgrade pip
-pip install -r requirements.txt
+python3 -m pip install --user --upgrade pip
+python3 -m pip install --user -r requirements.txt
 
 echo
 echo "Making scripts executable..."
 
-chmod +x scripts/run_project.sh
-chmod +x scripts/run_spark.sh
-chmod +x scripts/run_machine_producer.sh
-chmod +x scripts/run_worker_producer.sh
-chmod +x scripts/reset.sh
-chmod +x scripts/opensearch_init.sh
+chmod +x scripts/*.sh
 
 echo
 echo "===================================="
@@ -57,5 +33,5 @@ echo "Setup completed successfully!"
 echo "===================================="
 
 echo
-echo "Next step:"
+echo "Run:"
 echo "./scripts/run_project.sh"

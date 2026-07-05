@@ -2,109 +2,130 @@
 
 set -e
 
+############################################
+# Load Environment Variables
+############################################
+
+set -a
+source .env
+set +a
+
+echo "===================================="
+echo "Amazon OpenSearch Initialization"
+echo "===================================="
+
+echo
 echo "Waiting for OpenSearch..."
 
-until docker exec jupyter bash -c '
-curl -f -k -s \
--u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
-"https://$OPENSEARCH_HOST:$OPENSEARCH_PORT" >/dev/null
-'
+until curl -f -k -s \
+    -u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
+    "https://$OPENSEARCH_HOST:$OPENSEARCH_PORT" >/dev/null
 do
     echo "Waiting..."
     sleep 5
 done
 
-echo "OpenSearch is ready."
+echo
+echo "✓ OpenSearch is ready."
 
 ############################################
 # Helper Functions
 ############################################
 
 upload_template() {
+
     local template_name=$1
     local template_file=$2
 
-    echo "Uploading template: $template_name..."
+    echo
+    echo "Uploading template: $template_name"
 
-    docker exec jupyter bash -c "
     curl -f -k \
-    -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
-    -H 'Content-Type: application/json' \
-    -X PUT \
-    \"https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/_index_template/$template_name\" \
-    -d @$template_file
-    "
+        -u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
+        -H "Content-Type: application/json" \
+        -X PUT \
+        "https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/_index_template/$template_name" \
+        -d @"$template_file"
+
+    echo
+    echo "✓ Template uploaded."
 }
 
 create_index_if_missing() {
+
     local index_name=$1
 
-    echo "Checking index: $index_name..."
+    echo
+    echo "Checking index: $index_name"
 
-    status=$(docker exec jupyter bash -c "
-    curl -k -s -o /dev/null -w '%{http_code}' \
-    -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
-    https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/$index_name
-    ")
+    status=$(curl -k -s \
+        -o /dev/null \
+        -w "%{http_code}" \
+        -u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
+        "https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/$index_name")
 
-    if [ "$status" = "200" ]; then
-        echo "✓ $index_name already exists. Skipping."
-    else
-        echo "Creating index: $index_name..."
+    case "$status" in
 
-        docker exec jupyter bash -c "
-        curl -f -k \
-        -u \"\$OPENSEARCH_USER:\$OPENSEARCH_PASSWORD\" \
-        -X PUT \
-        https://\$OPENSEARCH_HOST:\$OPENSEARCH_PORT/$index_name
-        "
+        200)
+            echo "✓ Index already exists."
+            ;;
 
-        echo "✓ $index_name created."
-    fi
+        404)
+            echo "Creating index..."
+
+            curl -f -k \
+                -u "$OPENSEARCH_USER:$OPENSEARCH_PASSWORD" \
+                -X PUT \
+                "https://$OPENSEARCH_HOST:$OPENSEARCH_PORT/$index_name"
+
+            echo "✓ Index created."
+            ;;
+
+        *)
+            echo "Unexpected response while checking $index_name"
+            echo "HTTP Status: $status"
+            exit 1
+            ;;
+    esac
 }
 
 ############################################
-# Machine Events
+# Upload Templates
 ############################################
 
 upload_template \
     "machine-template" \
-    "/home/jovyan/work/opensearch/templates/machine_template.json"
-
-create_index_if_missing "machine-events"
-
-############################################
-# Machine Aggregates
-############################################
+    "opensearch/templates/machine_template.json"
 
 upload_template \
     "machine-aggregates-template" \
-    "/home/jovyan/work/opensearch/templates/machine_aggregates_template.json"
-
-create_index_if_missing "machine-aggregates"
-
-############################################
-# Worker Events
-############################################
+    "opensearch/templates/machine_aggregates_template.json"
 
 upload_template \
     "worker-template" \
-    "/home/jovyan/work/opensearch/templates/worker_template.json"
-
-create_index_if_missing "worker-events"
-
-############################################
-# Worker Safety
-############################################
+    "opensearch/templates/worker_template.json"
 
 upload_template \
     "worker-safety-template" \
-    "/home/jovyan/work/opensearch/templates/worker_safety_template.json"
+    "opensearch/templates/worker_safety_template.json"
+
+############################################
+# Create Indices
+############################################
+
+create_index_if_missing "machine-events"
+
+create_index_if_missing "machine-aggregates"
+
+create_index_if_missing "worker-events"
 
 create_index_if_missing "worker-safety"
 
 echo
 echo "===================================="
-echo "OpenSearch templates uploaded."
-echo "OpenSearch indices are ready."
+echo "OpenSearch initialization completed."
 echo "===================================="
+echo
+echo "Templates uploaded successfully."
+echo "Indices verified successfully."
+echo

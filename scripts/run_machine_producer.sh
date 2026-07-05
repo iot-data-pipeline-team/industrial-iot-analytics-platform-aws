@@ -2,11 +2,8 @@
 
 set -e
 
-source venv/bin/activate
-
 echo "===================================="
 echo "Starting Machine Producer..."
 echo "===================================="
 
-venv/bin/python producer/ahmed_producer.py 
-
+python3 producer/machine_producer.py

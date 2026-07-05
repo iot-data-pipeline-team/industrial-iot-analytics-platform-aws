@@ -2,17 +2,10 @@
 Sends full JSON events for 4 machines in round-robin order:
   CNC_01 → ROB_01 → CNV_01 → PMP_01 → CNC_01 → ...
 
-Each machine sends directly to Kafka — no middleware, no data loss.
-
-Install: pip install kafka-python
-Run:     python kafka_producer.py
-Run fast:  python kafka_producer.py --interval 0
-Run N:     python kafka_producer.py --count 40
 """
 
 
 import json
-import os
 import time
 import random
 import argparse
@@ -20,9 +13,7 @@ import logging
 from datetime import datetime, timezone
 import math
 from itertools import cycle
-from kafka import KafkaProducer
-from kafka.errors import KafkaError
-
+import boto3
 
 
 
@@ -41,8 +32,7 @@ log = logging.getLogger(__name__)
 
 # Host default uses EXTERNAL listeners from docker-compose (19092-19094).
 # Inside Docker network use: kafka1:9092,kafka2:9093,kafka3:9094
-KAFKA_BOOTSTRAP = "localhost:19092,localhost:19093,localhost:19094"
-TOPIC = "sensor-events"
+STREAM_NAME = "machine-events-stream"
 INTERVAL   = 1.0       # seconds between each machine reading
 
 # ── MACHINE DEFINITIONS ───────────────────────────────────────────
@@ -292,51 +282,31 @@ def generate_reading(m):
 
 def main(interval, count):
 
-    # connect to Kafka
-    print(f"Connecting to Kafka: {KAFKA_BOOTSTRAP}")
-    try:
-        producer = KafkaProducer(
-            bootstrap_servers   = KAFKA_BOOTSTRAP,
-            value_serializer    = lambda v: json.dumps(v).encode("utf-8"),
-            key_serializer      = lambda k: k.encode("utf-8"),
-            acks                = "all",      # wait for all replicas
-            retries             = 3,
-            linger_ms           = 5,          # small batch window
-            compression_type    = "gzip",
-        )
-        print(f"✅  Connected — topic: {TOPIC}\n")
-    except KafkaError as e:
-        print(f"❌  Kafka connection failed: {e}")
-        return
+    kinesis = boto3.client("kinesis")
+
+    print(f"Connected to Amazon Kinesis stream: {STREAM_NAME}") 
 
     machine_cycle = cycle(MACHINES)
     sent_total    = 0
     fault_total   = 0
 
-    print("┌─────────────────────────────────────────────────────────────┐")
-    print("│  IoT Kafka Producer — Round-Robin                           │")
-    print("│  CNC_01 → ROB_01 → CNV_01 → PMP_01 → repeat                │")
-    print(f"│  Brokers: {KAFKA_BOOTSTRAP:<47}│")
-    print(f"│  Topic:   {TOPIC:<47}  │")
-    print(f"│  Interval: {interval}s  |  Target: {'∞' if count == 0 else count} events{' ' * 20}│")
-    print("└─────────────────────────────────────────────────────────────┘\n")
+
 
     try:
         while True:
             m     = next(machine_cycle)
             event = generate_reading(m)
 
-            # send to Kafka — key = machine_id ensures same machine
-            # always goes to the same partition (ordered per machine)
-            future = producer.send(
-                TOPIC,
-                key   = event["machine_id"],
-                value = event,
+            # Send the event to Kinesis using machine_id as the partition key.
+            
+            response = kinesis.put_record(
+                StreamName=STREAM_NAME,
+                Data=json.dumps(event),
+                PartitionKey=event["machine_id"]  or "UNKNOWN"
             )
 
             # block briefly to catch send errors
             try:
-                record_metadata = future.get(timeout=5)
                 sent_total  += 1
                 fault_total += int(event["is_fault"])
 
@@ -368,7 +338,7 @@ def main(interval, count):
 
                 print(
                     f"  → [{sent_total:>4}]  "
-                    f"partition={record_metadata.partition}  "
+                    f"shard={response['ShardId']}  "
                     f"{event['machine_id']:<8}  "
                     f"{icon} {event['status']:<8}  "
                     f"temp={temp_display}°C  "                    
@@ -377,7 +347,7 @@ def main(interval, count):
                     f"{ferr}"
                 )
 
-            except KafkaError as e:
+            except Exception as e:
                 print(f"  ✗ [{sent_total}] SEND FAILED — {e}")
 
             # summary every 20 events
@@ -395,13 +365,11 @@ def main(interval, count):
     except KeyboardInterrupt:
         print(f"\n⛔  Stopped — {sent_total} sent | {fault_total} faults")
     finally:
-        producer.flush()
-        producer.close()
         print("Producer closed.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="IoT sensor Kafka producer")
+    parser = argparse.ArgumentParser(description="IoT sensor Kinesis producer")
     parser.add_argument(
         "--interval", type=float, default=INTERVAL,
         help="Seconds between events (default: 1.0)",
@@ -410,10 +378,6 @@ if __name__ == "__main__":
         "--count", type=int, default=0,
         help="Stop after N events (0 = run forever)",
     )
-    parser.add_argument(
-        "--bootstrap", default=KAFKA_BOOTSTRAP,
-        help="Kafka bootstrap servers",
-    )
+
     args = parser.parse_args()
-    KAFKA_BOOTSTRAP = args.bootstrap
     main(args.interval, args.count)

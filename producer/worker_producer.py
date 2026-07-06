@@ -5,9 +5,11 @@ import time
 from datetime import datetime, timezone
 from itertools import cycle
 
-import boto3
+from msk_producer import producer
 
 
+
+TOPIC_NAME = "worker-events"
 
 
 WORKERS = [
@@ -96,7 +98,7 @@ def generate_worker_event(worker):
     }
 
 
-kinesis = boto3.client("kinesis")
+
 
 worker_cycle = cycle(WORKERS)
 
@@ -106,12 +108,19 @@ while True:
 
     event = generate_worker_event(worker)
 
-    kinesis.put_record(
-        StreamName="worker-events-stream",
-        Data=json.dumps(event),
-        PartitionKey=event["worker_id"] or "UNKNOWN"
+    producer.produce(
+        topic=TOPIC_NAME,
+        key=event["worker_id"] or "UNKNOWN",
+        value=json.dumps(event)
     )
 
-    print(event)
+    producer.flush()
 
+    print(
+        f"Worker={event['worker_id']} "
+        f"HeartRate={event['heart_rate']} "
+        f"Fatigue={event['fatigue_score']} "
+        f"Danger={event['danger_zone']}"
+    )
+    
     time.sleep(1)

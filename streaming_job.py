@@ -733,30 +733,33 @@ bronze_s3_query = bronze_df.writeStream \
 
 
 
-# def write_silver_to_es(batch_df, batch_id):
-#     try:    
-#         batch_df.write \
-#             .format("opensearch") \
-#             .option("opensearch.nodes", OPENSEARCH_HOST) \
-#             .option("opensearch.port", OPENSEARCH_PORT) \
-#             .option("opensearch.net.ssl", "true") \
-#             .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#             .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#             .option("opensearch.nodes.wan.only", "true") \
-#             .option("opensearch.index.auto.create", "true") \
-#             .mode("append") \
-#             .save("machine-events")
-#     except Exception as e:
-#         print(f"[FATAL] Elasticsearch write failed: {e}")
-#         raise e    
+def write_machine_silver_to_opensearch(batch_df, batch_id):
+    try:    
+        batch_df.write \
+            .format("opensearch") \
+            .option("opensearch.nodes", OPENSEARCH_HOST) \
+            .option("opensearch.port", OPENSEARCH_PORT) \
+            .option("opensearch.net.ssl", "true") \
+            .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+            .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+            .option("opensearch.nodes.wan.only", "true") \
+            .option("opensearch.index.auto.create", "true") \
+            .mode("append") \
+            .save("machine-events")
+    except Exception as e:
+        print(f"[FATAL] Elasticsearch write failed: {e}")
+        raise e    
 
 
 
-# silver_elastic_query = silver_df.writeStream \
-#     .foreachBatch(write_silver_to_es) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_elastic") \
-#     .start()
+silver_elastic_query = silver_df.writeStream \
+    .foreachBatch(write_machine_silver_to_opensearch) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_elastic") \
+    .start()
+
+
+
 # print("Streaming queries:")
 # for q in spark.streams.active:
 #     print("--------------------------------")
@@ -1327,28 +1330,28 @@ worker_gold_df = (
 # )
 
 
-# def write_worker_bronze_to_s3(
-#     batch_df,
-#     batch_id
-# ):
+def write_worker_bronze_to_s3(
+    batch_df,
+    batch_id
+):
 
-#     batch_df.write \
-#         .mode("append") \
-#         .parquet(
-#             "s3a://iot-platform-malek/bronze/worker_bronze_data/"
-#         )
-# worker_bronze_s3_query = (
-#     worker_bronze_df
-#     .writeStream
-#     .foreachBatch(
-#         write_worker_bronze_to_s3
-#     )
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_bronze_s3"
-#     )
-#     .start()
-# )
+    batch_df.write \
+        .mode("append") \
+        .parquet(
+            "s3a://iot-platform-malek/bronze/worker_bronze_data/"
+        )
+worker_bronze_s3_query = (
+    worker_bronze_df
+    .writeStream
+    .foreachBatch(
+        write_worker_bronze_to_s3
+    )
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_bronze_s3"
+    )
+    .start()
+)
 
 
 

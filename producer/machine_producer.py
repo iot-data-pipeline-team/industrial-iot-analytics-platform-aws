@@ -13,9 +13,7 @@ import logging
 from datetime import datetime, timezone
 import math
 from itertools import cycle
-import boto3
-
-
+from msk_producer import producer
 
 
 
@@ -32,7 +30,7 @@ log = logging.getLogger(__name__)
 
 # Host default uses EXTERNAL listeners from docker-compose (19092-19094).
 # Inside Docker network use: kafka1:9092,kafka2:9093,kafka3:9094
-STREAM_NAME = "machine-events-stream"
+TOPIC_NAME = "machine-events"
 INTERVAL   = 1.0       # seconds between each machine reading
 
 # ── MACHINE DEFINITIONS ───────────────────────────────────────────
@@ -282,9 +280,8 @@ def generate_reading(m):
 
 def main(interval, count):
 
-    kinesis = boto3.client("kinesis")
 
-    print(f"Connected to Amazon Kinesis stream: {STREAM_NAME}") 
+    print("Connected to Amazon MSK topic: machine-events")
 
     machine_cycle = cycle(MACHINES)
     sent_total    = 0
@@ -299,11 +296,17 @@ def main(interval, count):
 
             # Send the event to Kinesis using machine_id as the partition key.
             
-            response = kinesis.put_record(
-                StreamName=STREAM_NAME,
-                Data=json.dumps(event),
-                PartitionKey=event["machine_id"]  or "UNKNOWN"
+            producer.produce(
+                topic=TOPIC_NAME,
+                key=event["machine_id"] or "UNKNOWN",
+                value=json.dumps(event)
             )
+
+            producer.flush()
+
+            response = {
+                "ShardId": "MSK"
+            }
 
             # block briefly to catch send errors
             try:

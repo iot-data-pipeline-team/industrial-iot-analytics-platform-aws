@@ -29,14 +29,39 @@ OPENSEARCH_PORT = os.getenv("OPENSEARCH_PORT", "443")
 OPENSEARCH_USER = os.getenv("OPENSEARCH_USER")
 OPENSEARCH_PASSWORD = os.getenv("OPENSEARCH_PASSWORD")
 
-df = spark.readStream \
-    .format("aws-kinesis") \
-    .option("kinesis.region", "us-east-1") \
-    .option("kinesis.streamName", "machine-events-stream") \
-    .option("kinesis.consumerType", "GetRecords") \
-    .option("kinesis.endpointUrl", "https://kinesis.us-east-1.amazonaws.com") \
-    .option("kinesis.startingPosition", "LATEST") \
+df = (
+    spark.readStream
+    .format("kafka")
+    .option(
+        "kafka.bootstrap.servers",
+        "boot-vpgxsmnj.c3.kafka-serverless.us-east-1.amazonaws.com:9098"
+    )
+    .option(
+        "subscribe",
+        "machine-events"
+    )
+    .option(
+        "kafka.security.protocol",
+        "SASL_SSL"
+    )
+    .option(
+        "kafka.sasl.mechanism",
+        "AWS_MSK_IAM"
+    )
+    .option(
+        "kafka.sasl.jaas.config",
+        "software.amazon.msk.auth.iam.IAMLoginModule required;"
+    )
+    .option(
+        "kafka.sasl.client.callback.handler.class",
+        "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+    )
+    .option(
+        "startingOffsets",
+        "latest"
+    )
     .load()
+)
 
 
 
@@ -95,7 +120,9 @@ schema = StructType([
     )    
 ])
 
-bronze_df = df.selectExpr("CAST(data AS STRING) AS value") \
+bronze_df = df.selectExpr(
+    "CAST(value AS STRING) AS value"
+) \
     .select(from_json(col("value"), schema).alias("data")) \
     .select("data.*")
 
@@ -848,21 +875,43 @@ worker_schema = StructType([
     )
 ])
 
-
 worker_raw_df = (
     spark.readStream
-    .format("aws-kinesis")
-    .option("kinesis.region", "us-east-1")
-    .option("kinesis.streamName", "worker-events-stream")
-    .option("kinesis.consumerType", "GetRecords")
-    .option("kinesis.endpointUrl", "https://kinesis.us-east-1.amazonaws.com")
-    .option("kinesis.startingPosition", "LATEST")
+    .format("kafka")
+    .option(
+        "kafka.bootstrap.servers",
+        "boot-vpgxsmnj.c3.kafka-serverless.us-east-1.amazonaws.com:9098"
+    )
+    .option(
+        "subscribe",
+        "worker-events"
+    )
+    .option(
+        "kafka.security.protocol",
+        "SASL_SSL"
+    )
+    .option(
+        "kafka.sasl.mechanism",
+        "AWS_MSK_IAM"
+    )
+    .option(
+        "kafka.sasl.jaas.config",
+        "software.amazon.msk.auth.iam.IAMLoginModule required;"
+    )
+    .option(
+        "kafka.sasl.client.callback.handler.class",
+        "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+    )
+    .option(
+        "startingOffsets",
+        "latest"
+    )
     .load()
 )
 
 worker_bronze_df = (
     worker_raw_df
-    .selectExpr("CAST(data AS STRING) AS value")
+    .selectExpr("CAST(value AS STRING) AS value")
     .select(
         from_json(
             col("value"),

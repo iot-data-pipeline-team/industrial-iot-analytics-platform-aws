@@ -20,7 +20,7 @@ git config --global user.email "amm2592000@gmail.com"
 
 
 # To access Redshift
- PGPASSWORD='xZVDyDih9psf::v' psql -h iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com -p 5439 -U admin -d dev
+PGPASSWORD="$REDSHIFT_PASSWORD" psql -h iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com -p 5439 -U admin -d dev
 
  # To truncate Redshift Table
 TRUNCATE TABLE machine_events_bronze;
@@ -34,3 +34,5 @@ TRUNCATE TABLE worker_safety_gold;
 
 TRUNCATE TABLE machine_events_quarantine;
 TRUNCATE TABLE worker_events_quarantine;
+
+aws s3 rm s3://iot-platform-malek/checkpoints/machine_bronze_redshift --recursive

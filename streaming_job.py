@@ -347,13 +347,7 @@ gold_df = gold_df.select(
 #     .foreachBatch(debug_batch)
 #     .start()
 # )
-# print("Streaming queries:")
-# for q in spark.streams.active:
-#     print("--------------------------------")
-#     print("Name:", q.name)
-#     print("ID:", q.id)
-#     print("Status:", q.status)
-#     print("Recent progress:", q.recentProgress)
+
 
 # silver_kafka_df = silver_df.select(
 #     to_json(
@@ -448,17 +442,11 @@ bronze_s3_query = bronze_df.writeStream \
 #         "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
 #     ) \
 #     .start()
-# print("Streaming queries:")
-# for q in spark.streams.active:
-#     print("--------------------------------")
-#     print("Name:", q.name)
-#     print("ID:", q.id)
-#     print("Status:", q.status)
-#     print("Recent progress:", q.recentProgress)
 
 
 
-# def write_quarantine_to_postgres(
+
+# def write_machine_quarantine_to_redshift(
 #     batch_df,
 #     batch_id
 # ):
@@ -523,11 +511,11 @@ bronze_s3_query = bronze_df.writeStream \
 #             "validation_reason"
 #             ).write \
 #             .format("jdbc") \
-#             .option("url", "jdbc:postgresql://postgres:5432/db") \
+#             .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #             .option("dbtable", "machine_events_quarantine") \
-#             .option("user", "user") \
-#             .option("password", "password") \
-#             .option("driver", "org.postgresql.Driver") \
+#             .option("user", "admin") \
+#             .option("password", REDSHIFT_PASSWORD) \
+#             .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #             .mode("append") \
 #             .save()
 
@@ -540,12 +528,12 @@ bronze_s3_query = bronze_df.writeStream \
 #         print(str(e))
 #         raise        
 
-# invalid_query = (
+# machine_invalid_query = (
 #     invalid_df.writeStream
-#     .foreachBatch(write_quarantine_to_postgres)
+#     .foreachBatch(write_machine_quarantine_to_redshift)
 #     .option(
 #         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/quarantine"
+#         "s3a://iot-platform-malek/checkpoints/machine_quarantine_to_redshift"
 #     )
 #     .start()
 # )    
@@ -554,7 +542,7 @@ bronze_s3_query = bronze_df.writeStream \
 
 
 
-def write_bronze_to_redshift(batch_df, batch_id):
+def write_machine_bronze_to_redshift(batch_df, batch_id):
 
     print(f"[BRONZE] Batch {batch_id}")
 
@@ -590,14 +578,14 @@ def write_bronze_to_redshift(batch_df, batch_id):
         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
         .option("dbtable", "machine_events_bronze") \
         .option("user", "admin") \
-        .option("password", "xZVDyDih9psf::v") \
+        .option("password", REDSHIFT_PASSWORD) \
         .option("driver", "com.amazon.redshift.jdbc.Driver") \
         .mode("append") \
         .save()
     
 
 bronze_redshift_query = bronze_df.writeStream \
-    .foreachBatch(write_bronze_to_redshift) \
+    .foreachBatch(write_machine_bronze_to_redshift) \
     .trigger(processingTime="2 seconds") \
     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
     .start()
@@ -605,9 +593,8 @@ bronze_redshift_query = bronze_df.writeStream \
 
 
 
-# def write_silver_to_postgres(batch_df, batch_id):
+# def write_machine_silver_to_redshift(batch_df, batch_id):
 
-#     print(f"[POSTGRES] Batch {batch_id}")
 
 #     batch_df.select(
 #         "event_id",
@@ -660,20 +647,20 @@ bronze_redshift_query = bronze_df.writeStream \
         
 #     ).write \
 #         .format("jdbc") \
-#         .option("url", "jdbc:postgresql://postgres:5432/db") \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option("dbtable", "machine_events_silver") \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option("driver", "org.postgresql.Driver") \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
 
 
 
-# silver_postgres_query = silver_df.writeStream \
-#     .foreachBatch(write_silver_to_postgres) \
+# silver_redshift_query = silver_df.writeStream \
+#     .foreachBatch(write_machine_silver_to_redshift) \
 #     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_postgres") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_redshift") \
 #     .start()
 
 
@@ -683,7 +670,7 @@ bronze_redshift_query = bronze_df.writeStream \
 
 
 
-# def write_gold_to_postgres(batch_df, batch_id):
+# def write_machine_gold_to_redshift(batch_df, batch_id):
 
 
 #     print(f"[AGG] Batch {batch_id}")
@@ -713,20 +700,20 @@ bronze_redshift_query = bronze_df.writeStream \
 
 #     batch_df.write \
 #         .format("jdbc") \
-#         .option("url", "jdbc:postgresql://postgres:5432/db") \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option("dbtable", "machine_aggregates_gold") \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option("driver", "org.postgresql.Driver") \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
 
 
-# gold_postgres_query = gold_df.writeStream \
+# gold_redshift_query = gold_df.writeStream \
 #     .outputMode("update") \
-#     .foreachBatch(write_gold_to_postgres) \
+#     .foreachBatch(write_machine_gold_to_redshift) \
 #     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_postgres") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_redshift") \
 #     .start()
 
 
@@ -750,7 +737,7 @@ def write_machine_silver_to_opensearch(batch_df, batch_id):
             .mode("append") \
             .save("machine-events")
     except Exception as e:
-        print(f"[FATAL] Elasticsearch write failed: {e}")
+        print(f"[FATAL] Opensearch write failed: {e}")
         raise e    
 
 
@@ -758,18 +745,11 @@ def write_machine_silver_to_opensearch(batch_df, batch_id):
 machine_silver_opensearch_query = silver_df.writeStream \
     .foreachBatch(write_machine_silver_to_opensearch) \
     .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_elastic") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_opensearch") \
     .start()
 
 
 
-# print("Streaming queries:")
-# for q in spark.streams.active:
-#     print("--------------------------------")
-#     print("Name:", q.name)
-#     print("ID:", q.id)
-#     print("Status:", q.status)
-#     print("Recent progress:", q.recentProgress)
 
 def write_machine_gold_to_opensearch(batch_df, batch_id):
     try:
@@ -803,7 +783,7 @@ def write_machine_gold_to_opensearch(batch_df, batch_id):
         .mode("append") \
         .save("machine-aggregates")
     except Exception as e:
-        print(f"[FATAL] Elasticsearch write failed: {e}")
+        print(f"[FATAL] Opensearch write failed: {e}")
         raise e
 
 
@@ -814,7 +794,7 @@ machine_gold_opensearch_query = gold_df.writeStream \
     .outputMode("update") \
     .option(
         "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/machine_gold_elastic"
+        "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
     ) \
     .start()
 
@@ -1120,7 +1100,7 @@ worker_gold_df = (
     )
 )
 
-# def write_worker_quarantine_to_postgres(
+# def write_worker_quarantine_to_redshift(
 #     batch_df,
 #     batch_id
 # ):
@@ -1139,20 +1119,14 @@ worker_gold_df = (
 #         "validation_reason"
 #     ).write \
 #         .format("jdbc") \
-#         .option(
-#             "url",
-#             "jdbc:postgresql://postgres:5432/db"
-#         ) \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option(
 #             "dbtable",
 #             "worker_events_quarantine"
 #         ) \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option(
-#             "driver",
-#             "org.postgresql.Driver"
-#         ) \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
     
@@ -1160,16 +1134,16 @@ worker_gold_df = (
 #     worker_invalid_df
 #     .writeStream
 #     .foreachBatch(
-#         write_worker_quarantine_to_postgres
+#         write_worker_quarantine_to_redshift
 #     )
 #     .option(
 #         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_quarantine"
+#         "s3a://iot-platform-malek/checkpoints/worker_quarantine_redshift"
 #     )
 #     .start()
 # )    
 
-# def write_worker_bronze_to_postgres(
+# def write_worker_bronze_to_redshift(
 #     batch_df,
 #     batch_id
 # ):
@@ -1191,42 +1165,36 @@ worker_gold_df = (
 #         "fatigue_score"
 #     ).write \
 #         .format("jdbc") \
-#         .option(
-#             "url",
-#             "jdbc:postgresql://postgres:5432/db"
-#         ) \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option(
 #             "dbtable",
 #             "worker_events_bronze"
 #         ) \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option(
-#             "driver",
-#             "org.postgresql.Driver"
-#         ) \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
     
 
-# worker_bronze_postgres_query = (
+# worker_bronze_redshift_query = (
 #     worker_bronze_df
 #     .writeStream
 #     .foreachBatch(
-#         write_worker_bronze_to_postgres
+#         write_worker_bronze_to_redshift
 #     )
 #     .trigger(
 #         processingTime="2 seconds"
 #     )
 #     .option(
 #         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_bronze_postgres"
+#         "s3a://iot-platform-malek/checkpoints/worker_bronze_redshift"
 #     )
 #     .start()
 # )
 
 
-# def write_worker_silver_to_postgres(
+# def write_worker_silver_to_redshift(
 #     batch_df,
 #     batch_id
 # ):
@@ -1253,36 +1221,30 @@ worker_gold_df = (
 #         "alert_level"
 #     ).write \
 #         .format("jdbc") \
-#         .option(
-#             "url",
-#             "jdbc:postgresql://postgres:5432/db"
-#         ) \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option(
 #             "dbtable",
 #             "worker_events_silver"
 #         ) \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option(
-#             "driver",
-#             "org.postgresql.Driver"
-#         ) \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
     
 
-# worker_silver_postgres_query = (
+# worker_silver_redshift_query = (
 #     worker_silver_df
 #     .writeStream
 #     .foreachBatch(
-#         write_worker_silver_to_postgres
+#         write_worker_silver_to_redshift
 #     )
 #     .trigger(
 #         processingTime="2 seconds"
 #     )
 #     .option(
 #         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_silver_postgres"
+#         "s3a://iot-platform-malek/checkpoints/worker_silver_redshift"
 #     )
 #     .start()
 # )
@@ -1290,7 +1252,7 @@ worker_gold_df = (
 
 
 
-# def write_worker_gold_to_postgres(
+# def write_worker_gold_to_redshift(
 #     batch_df,
 #     batch_id
 # ):
@@ -1301,33 +1263,27 @@ worker_gold_df = (
 
 #     batch_df.write \
 #         .format("jdbc") \
-#         .option(
-#             "url",
-#             "jdbc:postgresql://postgres:5432/db"
-#         ) \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
 #         .option(
 #             "dbtable",
 #             "worker_safety_gold"
 #         ) \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option(
-#             "driver",
-#             "org.postgresql.Driver"
-#         ) \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
 #         .mode("append") \
 #         .save()
     
-# worker_gold_postgres_query = (
+# worker_gold_redshift_query = (
 #     worker_gold_df
 #     .writeStream
 #     .outputMode("update")
 #     .foreachBatch(
-#         write_worker_gold_to_postgres
+#         write_worker_gold_to_redshift
 #     )
 #     .option(
 #         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_gold_postgres"
+#         "s3a://iot-platform-malek/checkpoints/worker_gold_redshift"
 #     )
 #     .start()
 # )
@@ -1479,7 +1435,7 @@ worker_silver_opensearch_query = (
     )
     .option(
         "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/worker_silver_elastic"
+        "s3a://iot-platform-malek/checkpoints/worker_silver_opensearch"
     )
     .start()
 )
@@ -1529,7 +1485,7 @@ worker_gold_opensearch_query = (
     )
     .option(
         "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/worker_gold_elastic"
+        "s3a://iot-platform-malek/checkpoints/worker_gold_opensearch"
     )
     .start()
 )    

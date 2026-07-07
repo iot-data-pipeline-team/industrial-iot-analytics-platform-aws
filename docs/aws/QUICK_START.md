@@ -9,3 +9,10 @@ git clone -b aws-cloud-migration-malek https://github.com/iot-data-pipeline-team
 
 # Connect to the EMR master node
 ssh -i "D:\iot-platform-key.pem" hadoop@ec2-44-200-208-66.compute-1.amazonaws.com
+
+
+# Configure Git (run once per new machine)
+git config --global user.name "Abdelrahman Malek"
+git config --global user.email "amm2592000@gmail.com"
+
+

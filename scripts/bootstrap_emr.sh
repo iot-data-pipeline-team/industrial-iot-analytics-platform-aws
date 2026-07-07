@@ -19,8 +19,8 @@ if [ ! -d "kafka_2.13-3.9.1" ]; then
     echo
     echo "Downloading Kafka 3.9.1..."
 
-    wget -q \
-      https://archive.apache.org/dist/kafka/3.9.1/kafka_2.13-3.9.1.tgz
+    wget --show-progress \
+    https://archive.apache.org/dist/kafka/3.9.1/kafka_2.13-3.9.1.tgz
 
     echo "Extracting Kafka..."
 

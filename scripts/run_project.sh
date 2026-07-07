@@ -25,17 +25,22 @@ echo "Initializing OpenSearch..."
 
 chmod +x scripts/*.sh
 
-
-./scripts/opensearch_init.sh
-
-############################################
-# Start Spark
-############################################
+echo
+echo "Step 1/4 - Installing dependencies..."
+./scripts/setup.sh
 
 echo
-echo "Starting Spark Streaming..."
+echo "Step 2/4 - Preparing EMR..."
+./scripts/bootstrap_emr.sh
 
+echo
+echo "Step 3/4 - Initializing OpenSearch..."
+./scripts/opensearch_init.sh
+
+echo
+echo "Step 4/4 - Starting Spark..."
 ./scripts/run_spark.sh
+
 
 echo
 echo "===================================="

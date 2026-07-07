@@ -11,6 +11,9 @@ git clone -b aws-cloud-migration-malek https://github.com/iot-data-pipeline-team
 ssh -i "D:\iot-platform-key.pem" hadoop@ec2-44-200-208-66.compute-1.amazonaws.com
 
 
+# Install the requirements for the project
+python3 -m pip install -r requirements.txt
+
 # Configure Git (run once per new machine)
 git config --global user.name "Abdelrahman Malek"
 git config --global user.email "amm2592000@gmail.com"

@@ -2,7 +2,7 @@ CREATE TABLE worker_events_quarantine (
 
     worker_id VARCHAR(50),
 
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     floor VARCHAR(10),
 
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS worker_events_bronze (
 
     worker_id VARCHAR(50),
 
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     floor VARCHAR(10),
 
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS worker_events_silver (
 
     worker_id VARCHAR(50),
 
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     floor VARCHAR(10),
 
@@ -81,9 +81,9 @@ CREATE TABLE IF NOT EXISTS worker_events_silver (
 CREATE TABLE IF NOT EXISTS worker_safety_gold (
     worker_id VARCHAR(50),
 
-    window_start TIMESTAMPTZ,
+    window_start TIMESTAMP,
 
-    window_end TIMESTAMPTZ,
+    window_end TIMESTAMP,
 
     violations_per_window BIGINT,
 
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS machine_events_quarantine (
 
     event_id VARCHAR(100),
 
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     machine_id VARCHAR(50),
 
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS machine_events_quarantine (
 
 CREATE TABLE IF NOT EXISTS machine_events_bronze (
     event_id VARCHAR(100),
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     machine_id VARCHAR(50),
     machine_type VARCHAR(50),
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS machine_events_bronze (
 CREATE TABLE IF NOT EXISTS machine_events_silver (
 
     event_id VARCHAR(100),
-    timestamp TIMESTAMPTZ,
+    timestamp TIMESTAMP,
 
     machine_id VARCHAR(50),
     machine_type VARCHAR(50),
@@ -225,8 +225,8 @@ CREATE TABLE IF NOT EXISTS machine_aggregates_gold (
 
     machine_id VARCHAR(50),
 
-    window_start TIMESTAMPTZ,
-    window_end TIMESTAMPTZ,
+    window_start TIMESTAMP,
+    window_end TIMESTAMP,
 
     avg_temp DOUBLE PRECISION,
     max_temp DOUBLE PRECISION,

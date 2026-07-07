@@ -554,53 +554,56 @@ bronze_s3_query = bronze_df.writeStream \
 
 
 
-# def write_bronze_to_postgres(batch_df, batch_id):
+def write_bronze_to_redshift(batch_df, batch_id):
 
-#     print(f"[BRONZE] Batch {batch_id}")
+    print(f"[BRONZE] Batch {batch_id}")
 
-#     batch_df.select(
-#         "event_id",
-#         "timestamp",
-#         "machine_id",
-#         "machine_type",
-#         "floor",
-#         "shift",
-#         "status",
-#         "error_code",
-#         "is_fault",
+    batch_df.select(
+        "event_id",
+        "timestamp",
+        "machine_id",
+        "machine_type",
+        "floor",
+        "shift",
+        "status",
+        "error_code",
+        "is_fault",
 
-#         "temperature",
-#         "vibration",
-#         "rpm",
-#         "power_kw",
+        "temperature",
+        "vibration",
+        "rpm",
+        "power_kw",
 
-#         "cnc_oil",
-#         "coolant_pressure",
+        "cnc_oil",
+        "coolant_pressure",
 
-#         "joint_torque",
-#         "force",
+        "joint_torque",
+        "force",
 
-#         "belt_tension",
-#         "load_weight",
+        "belt_tension",
+        "load_weight",
 
-#         "flow_rate",
-#         "inlet_pressure"
-#     ).write \
-#         .format("jdbc") \
-#         .option("url", "jdbc:postgresql://postgres:5432/db") \
-#         .option("dbtable", "machine_events_bronze") \
-#         .option("user", "user") \
-#         .option("password", "password") \
-#         .option("driver", "org.postgresql.Driver") \
-#         .mode("append") \
-#         .save()
+        "flow_rate",
+        "inlet_pressure"
+    ).write \
+        .format("jdbc") \
+        .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
+        .option("dbtable", "machine_events_bronze") \
+        .option("user", "admin") \
+        .option("password", "xZVDyDih9psf::v") \
+        .option("driver", "com.amazon.redshift.jdbc.Driver") \
+        .mode("append") \
+        .save()
     
 
-# bronze_postgres_query = bronze_df.writeStream \
-#     .foreachBatch(write_bronze_to_postgres) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_postgres") \
-#     .start()
+bronze_redshift_query = bronze_df.writeStream \
+    .foreachBatch(write_bronze_to_redshift) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
+    .start()
+
+
+
 
 # def write_silver_to_postgres(batch_df, batch_id):
 

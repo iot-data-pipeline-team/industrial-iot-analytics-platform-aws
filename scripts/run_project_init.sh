@@ -37,6 +37,12 @@ echo
 echo "Step 3/4 - Initializing OpenSearch..."
 ./scripts/opensearch_init.sh
 
+
+echo
+echo "Step 3.5/4 - Initializing Redshift..."
+./scripts/redshift_init.sh
+
+
 echo
 echo "Step 4/4 - Starting Spark..."
 ./scripts/run_spark.sh

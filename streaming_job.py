@@ -752,7 +752,7 @@ def write_machine_silver_to_opensearch(batch_df, batch_id):
 
 
 
-silver_elastic_query = silver_df.writeStream \
+machine_silver_opensearch_query = silver_df.writeStream \
     .foreachBatch(write_machine_silver_to_opensearch) \
     .trigger(processingTime="2 seconds") \
     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_elastic") \
@@ -768,52 +768,52 @@ silver_elastic_query = silver_df.writeStream \
 #     print("Status:", q.status)
 #     print("Recent progress:", q.recentProgress)
 
-# def write_gold_to_es(batch_df, batch_id):
-#     try:
-#         batch_df.select(
-#             col("machine_id"),
-#             col("window_start"),
-#             col("window_end"),
-#             col("avg_temp"),
-#             col("avg_rpm"),
-#             col("avg_vibration"),
-#             col("avg_power"),
-#             col("avg_health_score"),
-#             col("min_health_score"),
-#             col("fault_count"),
-#             col("fault_percentage"),
-#             col("total_events"),
-#             col("max_temp"),
-#             col("max_vibration"),
-#             col("peak_power"),
-#             col("avg_risk_score"),
-#             col("uptime_percentage")          
-#         ).write \
-#         .format("opensearch") \
-#         .option("opensearch.nodes", OPENSEARCH_HOST) \
-#         .option("opensearch.port", OPENSEARCH_PORT) \
-#         .option("opensearch.net.ssl", "true") \
-#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#         .option("opensearch.nodes.wan.only", "true") \
-#         .option("opensearch.index.auto.create", "true") \
-#         .mode("append") \
-#         .save("machine-aggregates")
-#     except Exception as e:
-#         print(f"[FATAL] Elasticsearch write failed: {e}")
-#         raise e
+def write_machine_gold_to_opensearch(batch_df, batch_id):
+    try:
+        batch_df.select(
+            col("machine_id"),
+            col("window_start"),
+            col("window_end"),
+            col("avg_temp"),
+            col("avg_rpm"),
+            col("avg_vibration"),
+            col("avg_power"),
+            col("avg_health_score"),
+            col("min_health_score"),
+            col("fault_count"),
+            col("fault_percentage"),
+            col("total_events"),
+            col("max_temp"),
+            col("max_vibration"),
+            col("peak_power"),
+            col("avg_risk_score"),
+            col("uptime_percentage")          
+        ).write \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
+        .mode("append") \
+        .save("machine-aggregates")
+    except Exception as e:
+        print(f"[FATAL] Elasticsearch write failed: {e}")
+        raise e
 
 
 
 
-# gold_elastic_query = gold_df.writeStream \
-#     .foreachBatch(write_gold_to_es) \
-#     .outputMode("update") \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_gold_elastic"
-#     ) \
-#     .start()
+machine_gold_opensearch_query = gold_df.writeStream \
+    .foreachBatch(write_machine_gold_to_opensearch) \
+    .outputMode("update") \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_gold_elastic"
+    ) \
+    .start()
 
 
 
@@ -1420,116 +1420,116 @@ worker_bronze_s3_query = (
 
 
 
-# def write_worker_silver_to_es(
-#     batch_df,
-#     batch_id
-# ):
-#     try:
+def write_worker_silver_to_opensearch(
+    batch_df,
+    batch_id
+):
+    try:
 
-#         batch_df.select(
-#             "worker_id",
-#             "timestamp",
-#             "floor",
-#             "zone_id",
-#             "helmet_on",
-#             "safety_vest_on",
-#             "heart_rate",
-#             "heart_rate_status",
-#             "movement_status",
-#             "danger_zone",
-#             "fatigue_score",
-#             "safety_violation_flag",
-#             "fatigue_status",
-#             "worker_risk_level",
-#             "alert_level"
-#         ).write \
-#         .format("opensearch") \
-#         .option("opensearch.nodes", OPENSEARCH_HOST) \
-#         .option("opensearch.port", OPENSEARCH_PORT) \
-#         .option("opensearch.net.ssl", "true") \
-#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#         .option("opensearch.nodes.wan.only", "true") \
-#         .option("opensearch.index.auto.create", "true") \
-#         .mode("append") \
-#         .save(
-#             "worker-events"
-#         )
+        batch_df.select(
+            "worker_id",
+            "timestamp",
+            "floor",
+            "zone_id",
+            "helmet_on",
+            "safety_vest_on",
+            "heart_rate",
+            "heart_rate_status",
+            "movement_status",
+            "danger_zone",
+            "fatigue_score",
+            "safety_violation_flag",
+            "fatigue_status",
+            "worker_risk_level",
+            "alert_level"
+        ).write \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
+        .mode("append") \
+        .save(
+            "worker-events"
+        )
 
-#     except Exception as e:
+    except Exception as e:
 
-#         print(
-#             f"[FATAL] Worker ES write failed: {e}"
-#         )
+        print(
+            f"[FATAL] Worker ES write failed: {e}"
+        )
 
-#         raise e
+        raise e
     
 
-# worker_silver_elastic_query = (
-#     worker_silver_df
-#     .writeStream
-#     .foreachBatch(
-#         write_worker_silver_to_es
-#     )
-#     .trigger(
-#         processingTime="2 seconds"
-#     )
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_silver_elastic"
-#     )
-#     .start()
-# )
+worker_silver_opensearch_query = (
+    worker_silver_df
+    .writeStream
+    .foreachBatch(
+        write_worker_silver_to_opensearch
+    )
+    .trigger(
+        processingTime="2 seconds"
+    )
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_silver_elastic"
+    )
+    .start()
+)
 
 
-# def write_worker_gold_to_es(
-#     batch_df,
-#     batch_id
-# ):
-#     try:
+def write_worker_gold_to_opensearch(
+    batch_df,
+    batch_id
+):
+    try:
 
-#         batch_df.select(
-#             "worker_id",
-#             "window_start",
-#             "window_end",
-#             "violations_per_window",
-#             "workers_in_danger_zone",
-#             "avg_fatigue_score"
-#         ).write \
-#         .format("opensearch") \
-#         .option("opensearch.nodes", OPENSEARCH_HOST) \
-#         .option("opensearch.port", OPENSEARCH_PORT) \
-#         .option("opensearch.net.ssl", "true") \
-#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#         .option("opensearch.nodes.wan.only", "true") \
-#         .option("opensearch.index.auto.create", "true") \
-#         .mode("append") \
-#         .save(
-#             "worker-safety"
-#         )
+        batch_df.select(
+            "worker_id",
+            "window_start",
+            "window_end",
+            "violations_per_window",
+            "workers_in_danger_zone",
+            "avg_fatigue_score"
+        ).write \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
+        .mode("append") \
+        .save(
+            "worker-safety"
+        )
 
-#     except Exception as e:
+    except Exception as e:
 
-#         print(
-#             f"[FATAL] Worker Gold ES write failed: {e}"
-#         )
+        print(
+            f"[FATAL] Worker Gold ES write failed: {e}"
+        )
 
-#         raise e
+        raise e
     
-# worker_gold_elastic_query = (
-#     worker_gold_df
-#     .writeStream
-#     .outputMode("update")
-#     .foreachBatch(
-#         write_worker_gold_to_es
-#     )
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_gold_elastic"
-#     )
-#     .start()
-# )    
+worker_gold_opensearch_query = (
+    worker_gold_df
+    .writeStream
+    .outputMode("update")
+    .foreachBatch(
+        write_worker_gold_to_opensearch
+    )
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_gold_elastic"
+    )
+    .start()
+)    
 
 
 

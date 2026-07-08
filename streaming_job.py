@@ -29,6 +29,18 @@ OPENSEARCH_PORT = os.getenv("OPENSEARCH_PORT", "443")
 OPENSEARCH_USER = os.getenv("OPENSEARCH_USER")
 OPENSEARCH_PASSWORD = os.getenv("OPENSEARCH_PASSWORD")
 
+
+# ===========================
+# Amazon Redshift Configuration
+# ===========================
+
+
+REDSHIFT_HOST = os.getenv("REDSHIFT_HOST")
+REDSHIFT_DATABASE = os.getenv("REDSHIFT_DATABASE")
+REDSHIFT_USER = os.getenv("REDSHIFT_USER")
+REDSHIFT_PASSWORD = os.getenv("REDSHIFT_PASSWORD")
+
+
 df = (
     spark.readStream
     .format("kafka")

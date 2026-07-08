@@ -1,0 +1,143 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Industrial IoT Analytics Platform - Amazon Managed Grafana
+
+Parameters:
+
+  WorkspaceName:
+    Type: String
+    Default: iot-platform-grafana
+
+  GrafanaVersion:
+    Type: String
+    Default: "12.4"
+
+  WorkspaceDescription:
+    Type: String
+    Default: Industrial IoT Analytics Platform Dashboard
+
+  RoleName:
+    Type: String
+    Default: GrafanaWorkspaceRole
+
+Resources:
+
+############################################################
+# IAM Role
+############################################################
+
+  GrafanaWorkspaceRole:
+
+    Type: AWS::IAM::Role
+
+    Properties:
+
+      RoleName: !Ref RoleName
+
+      AssumeRolePolicyDocument:
+
+        Version: "2012-10-17"
+
+        Statement:
+
+          - Effect: Allow
+
+            Principal:
+
+              Service:
+
+                - grafana.amazonaws.com
+
+            Action:
+
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+
+        - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+
+        - arn:aws:iam::aws:policy/AmazonOpenSearchServiceReadOnlyAccess
+
+        - arn:aws:iam::aws:policy/AmazonRedshiftReadOnlyAccess
+
+      Tags:
+
+        - Key: Project
+
+          Value: Industrial-IoT
+
+        - Key: Service
+
+          Value: Grafana
+
+############################################################
+# Workspace
+############################################################
+
+  GrafanaWorkspace:
+
+    Type: AWS::Grafana::Workspace
+
+    DeletionPolicy: Retain
+
+    UpdateReplacePolicy: Retain
+
+    Properties:
+
+      Name: !Ref WorkspaceName
+
+      Description: !Ref WorkspaceDescription
+
+      GrafanaVersion: !Ref GrafanaVersion
+
+      AccountAccessType: CURRENT_ACCOUNT
+
+      AuthenticationProviders:
+
+        - AWS_SSO
+
+      PermissionType: SERVICE_MANAGED
+
+      RoleArn: !GetAtt GrafanaWorkspaceRole.Arn
+
+      DataSources:
+
+        - CLOUDWATCH
+
+        - OPENSEARCH
+
+        - REDSHIFT
+
+      NotificationDestinations:
+
+        - SNS
+
+      Tags:
+
+        Project: Industrial-IoT
+
+        Environment: Production
+
+        Owner: Abdelrahman-Malek
+
+############################################################
+# Outputs
+############################################################
+
+Outputs:
+
+  WorkspaceId:
+
+    Value: !Ref GrafanaWorkspace
+
+  WorkspaceArn:
+
+    Value: !GetAtt GrafanaWorkspace.Arn
+
+  WorkspaceEndpoint:
+
+    Value: !GetAtt GrafanaWorkspace.Endpoint
+
+  WorkspaceRoleArn:
+
+    Value: !GetAtt GrafanaWorkspaceRole.Arn

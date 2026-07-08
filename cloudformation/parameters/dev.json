@@ -1,0 +1,86 @@
+[
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "iot-platform-os-domain"
+  },
+  {
+    "ParameterKey": "EngineVersion",
+    "ParameterValue": "OpenSearch_3.5"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "r7g.medium.search"
+  },
+  {
+    "ParameterKey": "InstanceCount",
+    "ParameterValue": "1"
+  },
+  {
+    "ParameterKey": "VolumeSize",
+    "ParameterValue": "10"
+  },
+  {
+    "ParameterKey": "Iops",
+    "ParameterValue": "3000"
+  },
+  {
+    "ParameterKey": "Throughput",
+    "ParameterValue": "125"
+  },
+  {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "vpc-0271ce060c544cf8c"
+  },
+  {
+    "ParameterKey": "SubnetId",
+    "ParameterValue": "subnet-025d8d4db494fb48f"
+  },
+  {
+    "ParameterKey": "SecurityGroupId",
+    "ParameterValue": "sg-054339d415bfcd11b"
+  },
+  {
+    "ParameterKey": "MasterUsername",
+    "ParameterValue": "admin"
+  },
+  {
+    "ParameterKey": "MasterPassword",
+    "ParameterValue": "CHANGE_ME"
+  },
+  {
+    "ParameterKey": "KmsKeyArn",
+    "ParameterValue": "arn:aws:kms:us-east-1:533267199028:key/2701473b-73eb-4185-9179-7afd27deb4a6"
+  },
+  {
+    "ParameterKey": "ClusterName",
+    "ParameterValue": "iot-platform-emr"
+  },
+  {
+    "ParameterKey": "ReleaseLabel",
+    "ParameterValue": "emr-spark-8.0.0"
+  },
+  {
+    "ParameterKey": "MasterInstanceType",
+    "ParameterValue": "c5.4xlarge"
+  },
+  {
+    "ParameterKey": "Ec2KeyName",
+    "ParameterValue": "iot-platform-key"
+  },
+  {
+    "ParameterKey": "LogBucket",
+    "ParameterValue": "aws-logs-533267199028-us-east-1"
+  },
+  {
+    "ParameterKey": "WorkspaceName",
+    "ParameterValue": "iot-platform-grafana"
+  },
+  {
+    "ParameterKey": "GrafanaVersion",
+    "ParameterValue": "12.4"
+  },
+  {
+    "ParameterKey": "NotificationEmail",
+    "ParameterValue": "amm2592000@gmail.com"
+  }
+]

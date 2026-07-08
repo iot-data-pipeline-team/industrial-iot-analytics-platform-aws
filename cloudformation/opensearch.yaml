@@ -1,0 +1,321 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Industrial IoT Analytics Platform
+  Amazon OpenSearch Service Domain
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+
+    ParameterGroups:
+
+      - Label:
+          default: Domain Configuration
+
+        Parameters:
+
+          - DomainName
+          - EngineVersion
+
+      - Label:
+          default: Cluster Configuration
+
+        Parameters:
+
+          - InstanceType
+          - InstanceCount
+          - VolumeSize
+          - Iops
+          - Throughput
+
+      - Label:
+          default: Network
+
+        Parameters:
+
+          - VpcId
+          - SubnetId
+          - SecurityGroupId
+
+      - Label:
+          default: Security
+
+        Parameters:
+
+          - MasterUsername
+          - MasterPassword
+          - KmsKeyArn
+
+Parameters:
+
+  DomainName:
+
+    Type: String
+
+    Default: iot-platform-os-domain
+
+  EngineVersion:
+
+    Type: String
+
+    Default: OpenSearch_3.5
+
+  InstanceType:
+
+    Type: String
+
+    Default: r7g.medium.search
+
+  InstanceCount:
+
+    Type: Number
+
+    Default: 1
+
+  VolumeSize:
+
+    Type: Number
+
+    Default: 10
+
+  Iops:
+
+    Type: Number
+
+    Default: 3000
+
+  Throughput:
+
+    Type: Number
+
+    Default: 125
+
+  VpcId:
+
+    Type: AWS::EC2::VPC::Id
+
+    Default: vpc-0271ce060c544cf8c
+
+  SubnetId:
+
+    Type: AWS::EC2::Subnet::Id
+
+    Default: subnet-025d8d4db494fb48f
+
+  SecurityGroupId:
+
+    Type: AWS::EC2::SecurityGroup::Id
+
+    Default: sg-054339d415bfcd11b
+
+  MasterUsername:
+
+    Type: String
+
+    Default: admin
+
+  MasterPassword:
+
+    Type: String
+
+    NoEcho: true
+
+  KmsKeyArn:
+
+    Type: String
+
+    Default: arn:aws:kms:us-east-1:533267199028:key/2701473b-73eb-4185-9179-7afd27deb4a6
+
+Resources:
+
+  OpenSearchDomain:
+
+    Type: AWS::OpenSearchService::Domain
+
+    DeletionPolicy: Retain
+
+    UpdateReplacePolicy: Retain
+
+    Properties:
+
+      DomainName: !Ref DomainName
+
+      EngineVersion: !Ref EngineVersion
+
+      ClusterConfig:
+
+        InstanceType: !Ref InstanceType
+
+        InstanceCount: !Ref InstanceCount
+
+        DedicatedMasterEnabled: false
+
+        ZoneAwarenessEnabled: false
+
+      EBSOptions:
+
+        EBSEnabled: true
+
+        VolumeType: gp3
+
+        VolumeSize: !Ref VolumeSize
+
+        Iops: !Ref Iops
+
+        Throughput: !Ref Throughput
+
+      VPCOptions:
+
+        SecurityGroupIds:
+
+          - !Ref SecurityGroupId
+
+        SubnetIds:
+
+          - !Ref SubnetId
+
+      DomainEndpointOptions:
+
+        EnforceHTTPS: true
+
+        TLSSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+
+      EncryptionAtRestOptions:
+
+        Enabled: true
+
+        KmsKeyId: !Ref KmsKeyArn
+
+      NodeToNodeEncryptionOptions:
+
+        Enabled: true
+
+      AdvancedSecurityOptions:
+
+        Enabled: true
+
+        InternalUserDatabaseEnabled: true
+
+        MasterUserOptions:
+
+          MasterUserName: !Ref MasterUsername
+
+          MasterUserPassword: !Ref MasterPassword
+      AccessPolicies:
+
+        Version: "2012-10-17"
+
+        Statement:
+
+          - Sid: DomainAccess
+
+            Effect: Allow
+
+            Principal:
+
+              AWS: "*"
+
+            Action:
+
+              - es:*
+
+            Resource:
+
+              - !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${DomainName}/*
+
+      SnapshotOptions:
+
+        AutomatedSnapshotStartHour: 0
+
+      AutoTuneOptions:
+
+        DesiredState: ENABLED
+
+        MaintenanceSchedules:
+
+          - StartAt: "2026-01-01T00:00:00Z"
+
+            CronExpressionForRecurrence: "cron(0 0 ? * * *)"
+
+            Duration:
+
+              Value: 10
+
+              Unit: HOURS
+
+      SoftwareUpdateOptions:
+
+        AutoSoftwareUpdateEnabled: true
+
+      Tags:
+
+        - Key: Project
+
+          Value: Industrial-IoT
+
+        - Key: Environment
+
+          Value: Production
+
+        - Key: Service
+
+          Value: OpenSearch
+
+        - Key: Owner
+
+          Value: Abdelrahman-Malek
+
+        - Key: ManagedBy
+
+          Value: CloudFormation
+
+Outputs:
+
+  DomainName:
+
+    Description: OpenSearch Domain Name
+
+    Value: !Ref OpenSearchDomain
+
+  DomainArn:
+
+    Description: Domain ARN
+
+    Value: !GetAtt OpenSearchDomain.Arn
+
+  DomainEndpoint:
+
+    Description: OpenSearch Endpoint
+
+    Value: !GetAtt OpenSearchDomain.DomainEndpoint
+
+  DashboardURL:
+
+    Description: OpenSearch Dashboards
+
+    Value: !Sub https://${OpenSearchDomain.DomainEndpoint}/_dashboards
+
+  SecurityGroup:
+
+    Description: Security Group
+
+    Value: !Ref SecurityGroupId
+
+  Subnet:
+
+    Description: Subnet
+
+    Value: !Ref SubnetId
+
+  Vpc:
+
+    Description: VPC
+
+    Value: !Ref VpcId
+
+  KmsKey:
+
+    Description: KMS Key
+
+    Value: !Ref KmsKeyArn          

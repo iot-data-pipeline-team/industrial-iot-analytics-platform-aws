@@ -1,0 +1,258 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Industrial IoT Analytics Platform - Amazon CloudWatch Monitoring
+
+Parameters:
+
+  NotificationEmail:
+    Type: String
+
+  EMRClusterId:
+    Type: String
+
+Resources:
+
+###########################################################
+# SNS Topic
+###########################################################
+
+  AlertTopic:
+
+    Type: AWS::SNS::Topic
+
+    Properties:
+
+      TopicName: industrial-iot-alerts
+
+      DisplayName: Industrial IoT Alerts
+
+      Tags:
+
+        - Key: Project
+          Value: Industrial-IoT
+
+        - Key: Environment
+          Value: Production
+
+###########################################################
+# Email Subscription
+###########################################################
+
+  EmailSubscription:
+
+    Type: AWS::SNS::Subscription
+
+    Properties:
+
+      Protocol: email
+
+      Endpoint: !Ref NotificationEmail
+
+      TopicArn: !Ref AlertTopic
+
+###########################################################
+# EMR Memory Alarm
+###########################################################
+
+  EMRMemoryAlarm:
+
+    Type: AWS::CloudWatch::Alarm
+
+    Properties:
+
+      AlarmName: EMR-High-Memory-Alarm
+
+      AlarmDescription: Sends notification when EMR memory usage becomes high.
+
+      Namespace: AWS/ElasticMapReduce
+
+      MetricName: MemoryAllocatedMB
+
+      Statistic: Average
+
+      Period: 60
+
+      EvaluationPeriods: 1
+
+      DatapointsToAlarm: 1
+
+      Threshold: 100
+
+      ComparisonOperator: GreaterThanThreshold
+
+      TreatMissingData: missing
+
+      Dimensions:
+
+        - Name: JobFlowId
+
+          Value: !Ref EMRClusterId
+
+      AlarmActions:
+
+        - !Ref AlertTopic
+
+      OKActions:
+
+        - !Ref AlertTopic
+
+###########################################################
+# EMR Idle Alarm
+###########################################################
+
+  EMRIdleAlarm:
+
+    Type: AWS::CloudWatch::Alarm
+
+    Properties:
+
+      AlarmName: EMR-Idle-Alarm
+
+      AlarmDescription: Detect when EMR cluster becomes idle.
+
+      Namespace: AWS/ElasticMapReduce
+
+      MetricName: IsIdle
+
+      Statistic: Average
+
+      Period: 300
+
+      EvaluationPeriods: 1
+
+      Threshold: 1
+
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+
+      TreatMissingData: missing
+
+      Dimensions:
+
+        - Name: JobFlowId
+
+          Value: !Ref EMRClusterId
+
+###########################################################
+# Dashboard
+###########################################################
+
+  MonitoringDashboard:
+
+    Type: AWS::CloudWatch::Dashboard
+
+    Properties:
+
+      DashboardName: Industrial-IoT-Monitoring
+
+      DashboardBody: !Sub |
+
+        {
+          "widgets":[
+            {
+              "type":"metric",
+              "x":0,
+              "y":0,
+              "width":12,
+              "height":6,
+              "properties":{
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "title":"EMR Memory",
+                "metrics":[
+                  [
+                    "AWS/ElasticMapReduce",
+                    "MemoryAllocatedMB",
+                    "JobFlowId",
+                    "${EMRClusterId}"
+                  ]
+                ]
+              }
+            },
+            {
+              "type":"metric",
+              "x":12,
+              "y":0,
+              "width":12,
+              "height":6,
+              "properties":{
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "title":"EMR Running Apps",
+                "metrics":[
+                  [
+                    "AWS/ElasticMapReduce",
+                    "AppsRunning",
+                    "JobFlowId",
+                    "${EMRClusterId}"
+                  ]
+                ]
+              }
+            },
+            {
+              "type":"metric",
+              "x":0,
+              "y":6,
+              "width":12,
+              "height":6,
+              "properties":{
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "title":"YARN Memory Available %",
+                "metrics":[
+                  [
+                    "AWS/ElasticMapReduce",
+                    "YARNMemoryAvailablePercentage",
+                    "JobFlowId",
+                    "${EMRClusterId}"
+                  ]
+                ]
+              }
+            },
+            {
+              "type":"metric",
+              "x":12,
+              "y":6,
+              "width":12,
+              "height":6,
+              "properties":{
+                "view":"timeSeries",
+                "region":"${AWS::Region}",
+                "title":"EMR Idle",
+                "metrics":[
+                  [
+                    "AWS/ElasticMapReduce",
+                    "IsIdle",
+                    "JobFlowId",
+                    "${EMRClusterId}"
+                  ]
+                ]
+              }
+            }
+          ]
+        }
+
+###########################################################
+# Outputs
+###########################################################
+
+Outputs:
+
+  DashboardName:
+
+    Value: !Ref MonitoringDashboard
+
+  DashboardURL:
+
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/cloudwatch/home?region=${AWS::Region}#dashboards:name=${MonitoringDashboard}
+
+  AlarmTopicArn:
+
+    Value: !Ref AlertTopic
+
+  MemoryAlarm:
+
+    Value: !Ref EMRMemoryAlarm
+
+  IdleAlarm:
+
+    Value: !Ref EMRIdleAlarm

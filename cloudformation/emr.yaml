@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Industrial IoT Analytics Platform - Amazon EMR Cluster
+
+Metadata:
+
+  AWS::CloudFormation::Interface:
+
+    ParameterGroups:
+
+      - Label:
+          default: EMR Configuration
+
+        Parameters:
+
+          - ClusterName
+          - ReleaseLabel
+
+      - Label:
+          default: EC2 Configuration
+
+        Parameters:
+
+          - MasterInstanceType
+          - Ec2KeyName
+
+      - Label:
+          default: Networking
+
+        Parameters:
+
+          - VpcSubnetId
+          - MasterSecurityGroup
+          - SlaveSecurityGroup
+          - ServiceAccessSecurityGroup
+
+      - Label:
+          default: IAM
+
+        Parameters:
+
+          - ServiceRole
+          - InstanceProfile
+
+Parameters:
+
+  ClusterName:
+
+    Type: String
+
+    Default: iot-platform-emr
+
+  ReleaseLabel:
+
+    Type: String
+
+    Default: emr-spark-8.0.0
+
+  MasterInstanceType:
+
+    Type: String
+
+    Default: c5.4xlarge
+
+  Ec2KeyName:
+
+    Type: AWS::EC2::KeyPair::KeyName
+
+    Default: iot-platform-key
+
+  VpcSubnetId:
+
+    Type: AWS::EC2::Subnet::Id
+
+    Default: subnet-025d8d4db494fb48f
+
+  MasterSecurityGroup:
+
+    Type: AWS::EC2::SecurityGroup::Id
+
+  SlaveSecurityGroup:
+
+    Type: AWS::EC2::SecurityGroup::Id
+
+  ServiceAccessSecurityGroup:
+
+    Type: AWS::EC2::SecurityGroup::Id
+
+  ServiceRole:
+
+    Type: String
+
+    Default: AmazonEMR-ServiceRole-20260704T092807
+
+  InstanceProfile:
+
+    Type: String
+
+    Default: AmazonEMR-InstanceProfile-20260704T092750
+
+Resources:
+
+  EMRCluster:
+
+    Type: AWS::EMR::Cluster
+
+    DeletionPolicy: Retain
+
+    UpdateReplacePolicy: Retain
+
+    Properties:
+
+      Name: !Ref ClusterName
+
+      ReleaseLabel: !Ref ReleaseLabel
+
+      VisibleToAllUsers: true
+
+      Applications:
+
+        - Name: Spark
+
+        - Name: Livy
+
+        - Name: JupyterEnterpriseGateway
+
+      JobFlowRole: !Ref InstanceProfile
+
+      ServiceRole: !Ref ServiceRole
+
+      LogUri: s3://aws-logs-533267199028-us-east-1/elasticmapreduce/
+
+      EbsRootVolumeSize: 15
+
+      ScaleDownBehavior: TERMINATE_AT_TASK_COMPLETION
+
+      Instances:
+
+        Ec2SubnetId: !Ref VpcSubnetId
+
+        Ec2KeyName: !Ref Ec2KeyName
+
+        KeepJobFlowAliveWhenNoSteps: true
+
+        TerminationProtected: false
+
+        EmrManagedMasterSecurityGroup:
+
+          !Ref MasterSecurityGroup
+
+        EmrManagedSlaveSecurityGroup:
+
+          !Ref SlaveSecurityGroup
+
+        ServiceAccessSecurityGroup:
+
+          !Ref ServiceAccessSecurityGroup
+
+        MasterInstanceGroup:
+
+          InstanceCount: 1
+
+          InstanceType: !Ref MasterInstanceType
+
+          Market: ON_DEMAND
+
+          Name: Primary
+      BootstrapActions: []
+
+      Configurations: []
+
+      Tags:
+
+        - Key: for-use-with-amazon-emr-managed-policies
+
+          Value: "true"
+
+      StepConcurrencyLevel: 1
+
+      AutoTerminationPolicy: {}
+
+Outputs:
+
+  ClusterId:
+
+    Description: EMR Cluster ID
+
+    Value: !Ref EMRCluster
+
+  ClusterArn:
+
+    Description: EMR Cluster ARN
+
+    Value: !Sub arn:aws:elasticmapreduce:${AWS::Region}:${AWS::AccountId}:cluster/${EMRCluster}
+
+  LogUri:
+
+    Description: Amazon S3 Log Location
+
+    Value: s3://aws-logs-533267199028-us-east-1/elasticmapreduce/
+
+  CloudWatchLogGroup:
+
+    Description: CloudWatch Log Group
+
+    Value: !Sub /aws/emr/${EMRCluster}
+
+  SparkHistoryServer:
+
+    Description: Spark History Server
+
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/emr/home?region=${AWS::Region}#/cluster/${EMRCluster}
+
+  Release:
+
+    Description: EMR Release
+
+    Value: !Ref ReleaseLabel
+
+  PrimaryInstanceType:
+
+    Description: Primary EC2 Instance Type
+
+    Value: !Ref MasterInstanceType          

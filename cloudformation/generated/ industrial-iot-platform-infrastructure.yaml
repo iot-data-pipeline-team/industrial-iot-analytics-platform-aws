@@ -1,0 +1,280 @@
+---
+Metadata:
+  AWSToolsMetrics:
+    IaC_Generator: "arn:aws:cloudformation:us-east-1:533267199028:generatedTemplate/e64e937b-5ed5-4c94-9bbc-e91595963894"
+Resources:
+  RedshiftServerlessNamespaceIotplatformnamespace:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::RedshiftServerless::Namespace"
+    DeletionPolicy: "Retain"
+    Properties:
+      AdminUsername: "admin"
+      NamespaceName: "iot-platform-namespace"
+      IamRoles:
+      - "arn:aws:iam::533267199028:role/service-role"
+      SnapshotCopyConfigurations: []
+      KmsKeyId: "AWS_OWNED_KMS_KEY"
+      DbName: "dev"
+      DefaultIamRoleArn: "arn:aws:iam::533267199028:role/service-role/AmazonRedshift-CommandsAccessRole-20260707T151743"
+      Tags: []
+      LogExports: []
+  RedshiftServerlessWorkgroupIotplatformworkgroup:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::RedshiftServerless::Workgroup"
+    DeletionPolicy: "Retain"
+    Properties:
+      NamespaceName: "iot-platform-namespace"
+      Port: 5439
+      WorkgroupName: "iot-platform-workgroup"
+      TrackName: "current"
+      BaseCapacity: 16
+      EnhancedVpcRouting: false
+      PubliclyAccessible: false
+      PricePerformanceTarget:
+        Status: "DISABLED"
+      Workgroup:
+        Endpoint:
+          VpcEndpoints:
+          - NetworkInterfaces:
+            - {}
+            - {}
+            - {}
+        PricePerformanceTarget:
+          Status: "DISABLED"
+      Tags: []
+  S3BucketIotplatformmalek:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::S3::Bucket"
+    DeletionPolicy: "Retain"
+    Properties:
+      AbacStatus: "Disabled"
+      PublicAccessBlockConfiguration:
+        RestrictPublicBuckets: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        BlockPublicAcls: true
+      BucketName: "iot-platform-malek"
+      OwnershipControls:
+        Rules:
+        - ObjectOwnership: "BucketOwnerEnforced"
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - BucketKeyEnabled: true
+          BlockedEncryptionTypes:
+            EncryptionType:
+            - "SSE-C"
+          ServerSideEncryptionByDefault:
+            SSEAlgorithm: "AES256"
+  EC2Subnet:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Retain"
+    Properties:
+      MapPublicIpOnLaunch: true
+      EnableDns64: false
+      VpcId: "vpc-0271ce060c544cf8c"
+      AvailabilityZoneId: "use1-az1"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1a"
+      CidrBlock: "172.31.0.0/20"
+      Ipv6Native: false
+      Tags: []
+  EC2SubnetNb:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Retain"
+    Properties:
+      MapPublicIpOnLaunch: true
+      EnableDns64: false
+      VpcId: "vpc-0271ce060c544cf8c"
+      AvailabilityZoneId: "use1-az4"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1c"
+      CidrBlock: "172.31.16.0/20"
+      Ipv6Native: false
+      Tags: []
+  EC2SecurityGroup:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::EC2::SecurityGroup"
+    DeletionPolicy: "Retain"
+    Properties:
+      GroupDescription: "default VPC security group"
+      GroupName: "default"
+      VpcId: "vpc-0271ce060c544cf8c"
+      SecurityGroupIngress:
+      - IpProtocol: "tcp"
+        FromPort: 5439
+        SourceSecurityGroupId: "sg-054339d415bfcd11b"
+        ToPort: 5439
+        SourceSecurityGroupOwnerId: "533267199028"
+      - IpProtocol: "tcp"
+        FromPort: 9098
+        SourceSecurityGroupId: "sg-054339d415bfcd11b"
+        ToPort: 9098
+        SourceSecurityGroupOwnerId: "533267199028"
+      - IpProtocol: "-1"
+        FromPort: -1
+        SourceSecurityGroupId: "sg-028b251e8448a6a4f"
+        ToPort: -1
+        SourceSecurityGroupOwnerId: "533267199028"
+      SecurityGroupEgress:
+      - CidrIp: "0.0.0.0/0"
+        IpProtocol: "-1"
+        FromPort: -1
+        ToPort: -1
+  IAMRoleAmazonRedshiftCommandsAccessRole20260707T151743:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::Role"
+    DeletionPolicy: "Retain"
+    Properties:
+      Path: "/service-role/"
+      ManagedPolicyArns:
+      - "arn:aws:iam::aws:policy/AmazonRedshiftAllCommandsFullAccess"
+      - "arn:aws:iam::533267199028:policy/service-role/AmazonRedshift-CommandsAccessPolicy-20260707T151743"
+      MaxSessionDuration: 3600
+      RoleName: "AmazonRedshift-CommandsAccessRole-20260707T151743"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Action: "sts:AssumeRole"
+          Effect: "Allow"
+          Principal:
+            Service:
+            - "redshift-serverless.amazonaws.com"
+            - "sagemaker.amazonaws.com"
+            - "redshift.amazonaws.com"
+  MSKServerlessClusterClusterindustrialiotmsk8efd2bf632104014b0af40bb5c6fbf09s3:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::MSK::ServerlessCluster"
+    DeletionPolicy: "Retain"
+    Properties:
+      ClusterName: "industrial-iot-msk"
+      VpcConfigs:
+      - SecurityGroups:
+        - "sg-028b251e8448a6a4f"
+        SubnetIds:
+        - "subnet-025d8d4db494fb48f"
+        - "subnet-0852aec05d4035377"
+        - "subnet-0a6c17286e34d1e36"
+      ClientAuthentication:
+        Sasl:
+          Iam:
+            Enabled: true
+      Tags: {}
+  EC2VPC:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: "Retain"
+    Properties:
+      CidrBlock: "172.31.0.0/16"
+      EnableDnsSupport: true
+      InstanceTenancy: "default"
+      EnableDnsHostnames: true
+      Tags: []
+  CloudWatchDashboardIndustrialIoTMonitoring:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::CloudWatch::Dashboard"
+    DeletionPolicy: "Retain"
+    Properties:
+      DashboardName: "Industrial-IoT-Monitoring"
+      DashboardBody: "{\"widgets\":[{\"type\":\"metric\",\"x\":0,\"y\":0,\"width\"\
+        :19,\"height\":9,\"properties\":{\"view\":\"timeSeries\",\"stacked\":false,\"\
+        metrics\":[[\"AWS/ElasticMapReduce\",\"AppsRunning\",\"JobFlowId\",\"j-14VM4E6J9TPOR\"\
+        ],[\".\",\"ContainerAllocated\",\".\",\"j-1NWHX7PJ4NVOD\"],[\".\",\"YARNMemoryAvailablePercentage\"\
+        ,\".\",\"j-241BBCP0LBT46\"],[\".\",\"IsIdle\",\".\",\".\"]],\"region\":\"\
+        us-east-1\"}}]}"
+      Tags: []
+  SNSTopicIndustrialiotalerts:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::SNS::Topic"
+    DeletionPolicy: "Retain"
+    Properties:
+      FifoTopic: false
+      Subscription:
+      - Endpoint: "amm2592000@gmail.com"
+        Protocol: "email"
+      ArchivePolicy: {}
+      TopicName: "industrial-iot-alerts"
+  IAMManagedPolicyPolicyserviceroleAmazonRedshiftCommandsAccessPolicy20260707T151743:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::IAM::ManagedPolicy"
+    DeletionPolicy: "Retain"
+    Properties:
+      ManagedPolicyName: "AmazonRedshift-CommandsAccessPolicy-20260707T151743"
+      Path: "/service-role/"
+      Description: ""
+      Groups: []
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Resource:
+          - "arn:aws:s3:::redshift/*"
+          - "arn:aws:s3:::redshift"
+          Action:
+          - "s3:GetObject"
+          - "s3:GetBucketAcl"
+          - "s3:GetBucketCors"
+          - "s3:GetEncryptionConfiguration"
+          - "s3:GetBucketLocation"
+          - "s3:ListBucket"
+          - "s3:ListAllMyBuckets"
+          - "s3:ListMultipartUploadParts"
+          - "s3:ListBucketMultipartUploads"
+          - "s3:PutObject"
+          - "s3:PutBucketAcl"
+          - "s3:PutBucketCors"
+          - "s3:DeleteObject"
+          - "s3:AbortMultipartUpload"
+          - "s3:CreateBucket"
+          Effect: "Allow"
+      Roles:
+      - "AmazonRedshift-CommandsAccessRole-20260707T151743"
+      Users: []
+  CloudWatchAlarmEMRHighMemoryAlarm:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::CloudWatch::Alarm"
+    DeletionPolicy: "Retain"
+    Properties:
+      ComparisonOperator: "GreaterThanThreshold"
+      TreatMissingData: "missing"
+      Dimensions:
+      - Value: "j-3QYCL79QPZWO6"
+        Name: "JobFlowId"
+      Period: 60
+      EvaluationPeriods: 1
+      Namespace: "AWS/ElasticMapReduce"
+      OKActions: []
+      AlarmActions:
+      - "arn:aws:sns:us-east-1:533267199028:industrial-iot-alerts"
+      MetricName: "MemoryAllocatedMB"
+      ActionsEnabled: true
+      AlarmDescription: "Sends an email when EMR memory allocation exceeds 100 MB."
+      AlarmName: "EMR-High-Memory-Alarm"
+      Statistic: "Average"
+      InsufficientDataActions: []
+      DatapointsToAlarm: 1
+      Tags: []
+      Threshold: 100
+  EC2SubnetPP:
+    UpdateReplacePolicy: "Retain"
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: "Retain"
+    Properties:
+      MapPublicIpOnLaunch: true
+      EnableDns64: false
+      VpcId: "vpc-0271ce060c544cf8c"
+      AvailabilityZoneId: "use1-az2"
+      PrivateDnsNameOptionsOnLaunch:
+        EnableResourceNameDnsARecord: false
+        HostnameType: "ip-name"
+        EnableResourceNameDnsAAAARecord: false
+      AvailabilityZone: "us-east-1b"
+      CidrBlock: "172.31.80.0/20"
+      Ipv6Native: false
+      Tags: []

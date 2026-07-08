@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: Industrial IoT Analytics Platform - S3 Bucket
+
+Parameters:
+
+  BucketName:
+    Type: String
+    Default: iot-platform-malek
+    Description: Name of the S3 bucket
+
+Resources:
+
+  DataLakeBucket:
+    Type: AWS::S3::Bucket
+
+    Properties:
+
+      BucketName: !Ref BucketName
+
+      VersioningConfiguration:
+        Status: Enabled
+
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+      Tags:
+        - Key: Project
+          Value: Industrial-IoT-Analytics
+
+        - Key: Environment
+          Value: Development
+
+Outputs:
+
+  BucketName:
+    Description: Created bucket
+    Value: !Ref DataLakeBucket

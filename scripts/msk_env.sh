@@ -4,7 +4,7 @@
 # MSK + Java Environment
 ############################################
 
-export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto.x86_64
+export JAVA_HOME=/usr/lib/jvm/java-17-amazon-corretto.aarch64
 export PATH="$JAVA_HOME/bin:$PATH"
 
 export CLASSPATH=/usr/share/aws/aws-java-sdk-v2/aws-sdk-java-bundle-2.41.32.jar:/usr/lib/spark/jars/aws-msk-iam-auth-2.3.5.jar

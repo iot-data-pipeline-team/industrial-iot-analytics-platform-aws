@@ -46,27 +46,11 @@ df = (
     .format("kafka")
     .option(
         "kafka.bootstrap.servers",
-        "boot-vpgxsmnj.c3.kafka-serverless.us-east-1.amazonaws.com:9098"
+        "172.31.22.16:19092,172.31.22.16:19093,172.31.22.16:19094"
     )
     .option(
         "subscribe",
         "machine-events"
-    )
-    .option(
-        "kafka.security.protocol",
-        "SASL_SSL"
-    )
-    .option(
-        "kafka.sasl.mechanism",
-        "AWS_MSK_IAM"
-    )
-    .option(
-        "kafka.sasl.jaas.config",
-        "software.amazon.msk.auth.iam.IAMLoginModule required;"
-    )
-    .option(
-        "kafka.sasl.client.callback.handler.class",
-        "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
     )
     .option(
         "startingOffsets",
@@ -369,8 +353,8 @@ gold_df = gold_df.select(
 
 # silver_kafka_query = silver_kafka_df.writeStream \
 #     .format("kafka") \
-#     .option("kafka.bootstrap.servers", "kafka1:9092,kafka2:9093,kafka3:9094") \
-#     .option("topic", "sensor-processed") \
+#     .option("kafka.bootstrap.servers", "172.31.22.16:19092,172.31.22.16:19093,172.31.22.16:19094") \
+#     .option("topic", "machine-processed") \
 #     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/sensor_processed_kafka") \
 #     .outputMode("append") \
 #     .start()
@@ -554,53 +538,53 @@ bronze_s3_query = bronze_df.writeStream \
 
 
 
-def write_machine_bronze_to_redshift(batch_df, batch_id):
+# def write_machine_bronze_to_redshift(batch_df, batch_id):
 
-    print(f"[BRONZE] Batch {batch_id}")
+#     print(f"[BRONZE] Batch {batch_id}")
 
-    batch_df.select(
-        "event_id",
-        "timestamp",
-        "machine_id",
-        "machine_type",
-        "floor",
-        "shift",
-        "status",
-        "error_code",
-        "is_fault",
+#     batch_df.select(
+#         "event_id",
+#         "timestamp",
+#         "machine_id",
+#         "machine_type",
+#         "floor",
+#         "shift",
+#         "status",
+#         "error_code",
+#         "is_fault",
 
-        "temperature",
-        "vibration",
-        "rpm",
-        "power_kw",
+#         "temperature",
+#         "vibration",
+#         "rpm",
+#         "power_kw",
 
-        "cnc_oil",
-        "coolant_pressure",
+#         "cnc_oil",
+#         "coolant_pressure",
 
-        "joint_torque",
-        "force",
+#         "joint_torque",
+#         "force",
 
-        "belt_tension",
-        "load_weight",
+#         "belt_tension",
+#         "load_weight",
 
-        "flow_rate",
-        "inlet_pressure"
-    ).write \
-        .format("jdbc") \
-        .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
-        .option("dbtable", "machine_events_bronze") \
-        .option("user", "admin") \
-        .option("password", REDSHIFT_PASSWORD) \
-        .option("driver", "com.amazon.redshift.jdbc.Driver") \
-        .mode("append") \
-        .save()
+#         "flow_rate",
+#         "inlet_pressure"
+#     ).write \
+#         .format("jdbc") \
+#         .option("url", "jdbc:redshift://iot-platform-workgroup.533267199028.us-east-1.redshift-serverless.amazonaws.com:5439/dev") \
+#         .option("dbtable", "machine_events_bronze") \
+#         .option("user", "admin") \
+#         .option("password", REDSHIFT_PASSWORD) \
+#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
+#         .mode("append") \
+#         .save()
     
 
-bronze_redshift_query = bronze_df.writeStream \
-    .foreachBatch(write_machine_bronze_to_redshift) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
-    .start()
+# bronze_redshift_query = bronze_df.writeStream \
+#     .foreachBatch(write_machine_bronze_to_redshift) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
+#     .start()
 
 
 
@@ -735,80 +719,80 @@ bronze_redshift_query = bronze_df.writeStream \
 
 
 
-def write_machine_silver_to_opensearch(batch_df, batch_id):
-    try:    
-        batch_df.write \
-            .format("opensearch") \
-            .option("opensearch.nodes", OPENSEARCH_HOST) \
-            .option("opensearch.port", OPENSEARCH_PORT) \
-            .option("opensearch.net.ssl", "true") \
-            .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-            .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-            .option("opensearch.nodes.wan.only", "true") \
-            .option("opensearch.index.auto.create", "true") \
-            .mode("append") \
-            .save("machine-events")
-    except Exception as e:
-        print(f"[FATAL] Opensearch write failed: {e}")
-        raise e    
+# def write_machine_silver_to_opensearch(batch_df, batch_id):
+#     try:    
+#         batch_df.write \
+#             .format("opensearch") \
+#             .option("opensearch.nodes", OPENSEARCH_HOST) \
+#             .option("opensearch.port", OPENSEARCH_PORT) \
+#             .option("opensearch.net.ssl", "true") \
+#             .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#             .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#             .option("opensearch.nodes.wan.only", "true") \
+#             .option("opensearch.index.auto.create", "true") \
+#             .mode("append") \
+#             .save("machine-events")
+#     except Exception as e:
+#         print(f"[FATAL] Opensearch write failed: {e}")
+#         raise e    
 
 
 
-machine_silver_opensearch_query = silver_df.writeStream \
-    .foreachBatch(write_machine_silver_to_opensearch) \
-    .trigger(processingTime="2 seconds") \
-    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_opensearch") \
-    .start()
-
-
-
-
-def write_machine_gold_to_opensearch(batch_df, batch_id):
-    try:
-        batch_df.select(
-            col("machine_id"),
-            col("window_start"),
-            col("window_end"),
-            col("avg_temp"),
-            col("avg_rpm"),
-            col("avg_vibration"),
-            col("avg_power"),
-            col("avg_health_score"),
-            col("min_health_score"),
-            col("fault_count"),
-            col("fault_percentage"),
-            col("total_events"),
-            col("max_temp"),
-            col("max_vibration"),
-            col("peak_power"),
-            col("avg_risk_score"),
-            col("uptime_percentage")          
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save("machine-aggregates")
-    except Exception as e:
-        print(f"[FATAL] Opensearch write failed: {e}")
-        raise e
+# machine_silver_opensearch_query = silver_df.writeStream \
+#     .foreachBatch(write_machine_silver_to_opensearch) \
+#     .trigger(processingTime="2 seconds") \
+#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_opensearch") \
+#     .start()
 
 
 
 
-machine_gold_opensearch_query = gold_df.writeStream \
-    .foreachBatch(write_machine_gold_to_opensearch) \
-    .outputMode("update") \
-    .option(
-        "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
-    ) \
-    .start()
+# def write_machine_gold_to_opensearch(batch_df, batch_id):
+#     try:
+#         batch_df.select(
+#             col("machine_id"),
+#             col("window_start"),
+#             col("window_end"),
+#             col("avg_temp"),
+#             col("avg_rpm"),
+#             col("avg_vibration"),
+#             col("avg_power"),
+#             col("avg_health_score"),
+#             col("min_health_score"),
+#             col("fault_count"),
+#             col("fault_percentage"),
+#             col("total_events"),
+#             col("max_temp"),
+#             col("max_vibration"),
+#             col("peak_power"),
+#             col("avg_risk_score"),
+#             col("uptime_percentage")          
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save("machine-aggregates")
+#     except Exception as e:
+#         print(f"[FATAL] Opensearch write failed: {e}")
+#         raise e
+
+
+
+
+# machine_gold_opensearch_query = gold_df.writeStream \
+#     .foreachBatch(write_machine_gold_to_opensearch) \
+#     .outputMode("update") \
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
+#     ) \
+#     .start()
 
 
 
@@ -878,27 +862,11 @@ worker_raw_df = (
     .format("kafka")
     .option(
         "kafka.bootstrap.servers",
-        "boot-vpgxsmnj.c3.kafka-serverless.us-east-1.amazonaws.com:9098"
+        "172.31.22.16:19092,172.31.22.16:19093,172.31.22.16:19094"
     )
     .option(
         "subscribe",
         "worker-events"
-    )
-    .option(
-        "kafka.security.protocol",
-        "SASL_SSL"
-    )
-    .option(
-        "kafka.sasl.mechanism",
-        "AWS_MSK_IAM"
-    )
-    .option(
-        "kafka.sasl.jaas.config",
-        "software.amazon.msk.auth.iam.IAMLoginModule required;"
-    )
-    .option(
-        "kafka.sasl.client.callback.handler.class",
-        "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
     )
     .option(
         "startingOffsets",
@@ -1391,116 +1359,116 @@ worker_bronze_s3_query = (
 
 
 
-def write_worker_silver_to_opensearch(
-    batch_df,
-    batch_id
-):
-    try:
+# def write_worker_silver_to_opensearch(
+#     batch_df,
+#     batch_id
+# ):
+#     try:
 
-        batch_df.select(
-            "worker_id",
-            "timestamp",
-            "floor",
-            "zone_id",
-            "helmet_on",
-            "safety_vest_on",
-            "heart_rate",
-            "heart_rate_status",
-            "movement_status",
-            "danger_zone",
-            "fatigue_score",
-            "safety_violation_flag",
-            "fatigue_status",
-            "worker_risk_level",
-            "alert_level"
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save(
-            "worker-events"
-        )
+#         batch_df.select(
+#             "worker_id",
+#             "timestamp",
+#             "floor",
+#             "zone_id",
+#             "helmet_on",
+#             "safety_vest_on",
+#             "heart_rate",
+#             "heart_rate_status",
+#             "movement_status",
+#             "danger_zone",
+#             "fatigue_score",
+#             "safety_violation_flag",
+#             "fatigue_status",
+#             "worker_risk_level",
+#             "alert_level"
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save(
+#             "worker-events"
+#         )
 
-    except Exception as e:
+#     except Exception as e:
 
-        print(
-            f"[FATAL] Worker ES write failed: {e}"
-        )
+#         print(
+#             f"[FATAL] Worker ES write failed: {e}"
+#         )
 
-        raise e
+#         raise e
     
 
-worker_silver_opensearch_query = (
-    worker_silver_df
-    .writeStream
-    .foreachBatch(
-        write_worker_silver_to_opensearch
-    )
-    .trigger(
-        processingTime="2 seconds"
-    )
-    .option(
-        "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/worker_silver_opensearch"
-    )
-    .start()
-)
+# worker_silver_opensearch_query = (
+#     worker_silver_df
+#     .writeStream
+#     .foreachBatch(
+#         write_worker_silver_to_opensearch
+#     )
+#     .trigger(
+#         processingTime="2 seconds"
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_silver_opensearch"
+#     )
+#     .start()
+# )
 
 
-def write_worker_gold_to_opensearch(
-    batch_df,
-    batch_id
-):
-    try:
+# def write_worker_gold_to_opensearch(
+#     batch_df,
+#     batch_id
+# ):
+#     try:
 
-        batch_df.select(
-            "worker_id",
-            "window_start",
-            "window_end",
-            "violations_per_window",
-            "workers_in_danger_zone",
-            "avg_fatigue_score"
-        ).write \
-        .format("opensearch") \
-        .option("opensearch.nodes", OPENSEARCH_HOST) \
-        .option("opensearch.port", OPENSEARCH_PORT) \
-        .option("opensearch.net.ssl", "true") \
-        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-        .option("opensearch.nodes.wan.only", "true") \
-        .option("opensearch.index.auto.create", "true") \
-        .mode("append") \
-        .save(
-            "worker-safety"
-        )
+#         batch_df.select(
+#             "worker_id",
+#             "window_start",
+#             "window_end",
+#             "violations_per_window",
+#             "workers_in_danger_zone",
+#             "avg_fatigue_score"
+#         ).write \
+#         .format("opensearch") \
+#         .option("opensearch.nodes", OPENSEARCH_HOST) \
+#         .option("opensearch.port", OPENSEARCH_PORT) \
+#         .option("opensearch.net.ssl", "true") \
+#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+#         .option("opensearch.nodes.wan.only", "true") \
+#         .option("opensearch.index.auto.create", "true") \
+#         .mode("append") \
+#         .save(
+#             "worker-safety"
+#         )
 
-    except Exception as e:
+#     except Exception as e:
 
-        print(
-            f"[FATAL] Worker Gold ES write failed: {e}"
-        )
+#         print(
+#             f"[FATAL] Worker Gold ES write failed: {e}"
+#         )
 
-        raise e
+#         raise e
     
-worker_gold_opensearch_query = (
-    worker_gold_df
-    .writeStream
-    .outputMode("update")
-    .foreachBatch(
-        write_worker_gold_to_opensearch
-    )
-    .option(
-        "checkpointLocation",
-        "s3a://iot-platform-malek/checkpoints/worker_gold_opensearch"
-    )
-    .start()
-)    
+# worker_gold_opensearch_query = (
+#     worker_gold_df
+#     .writeStream
+#     .outputMode("update")
+#     .foreachBatch(
+#         write_worker_gold_to_opensearch
+#     )
+#     .option(
+#         "checkpointLocation",
+#         "s3a://iot-platform-malek/checkpoints/worker_gold_opensearch"
+#     )
+#     .start()
+# )    
 
 
 

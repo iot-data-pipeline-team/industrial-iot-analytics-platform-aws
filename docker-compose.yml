@@ -29,7 +29,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:19092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092,EXTERNAL://localhost:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka1:9092,EXTERNAL://172.31.22.16:19092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -61,7 +61,7 @@ services:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,EXTERNAL://0.0.0.0:19093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9093,EXTERNAL://localhost:19093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:9093,EXTERNAL://172.31.22.16:19093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -94,7 +94,7 @@ services:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094,EXTERNAL://0.0.0.0:19094
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9094,EXTERNAL://localhost:19094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka3:9094,EXTERNAL://172.31.22.16:19094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
@@ -130,9 +130,9 @@ services:
 
         echo 'Creating topic iot-data...'
         
-        kafka-topics --create --if-not-exists --topic sensor-events --bootstrap-server kafka1:9092 --partitions 6 --replication-factor 3
+        kafka-topics --create --if-not-exists --topic machine-events --bootstrap-server kafka1:9092 --partitions 6 --replication-factor 3
 
-        kafka-topics --create --if-not-exists --topic sensor-processed --bootstrap-server kafka1:9092 --partitions 6 --replication-factor 3
+        kafka-topics --create --if-not-exists --topic machine-processed --bootstrap-server kafka1:9092 --partitions 6 --replication-factor 3
 
         kafka-topics --create --if-not-exists --topic worker-events --bootstrap-server kafka1:9092 --partitions 6 --replication-factor 3
         echo 'Kafka topic created successfully.'
@@ -154,224 +154,12 @@ services:
       - kafka2
       - kafka3
 
-  spark-master:
-    image: apache/spark:3.5.0
-    container_name: spark-master
-    environment:
-      - SPARK_MODE=master
-    ports:
-      - "8081:8080"
-      - "7077:7077"
-    networks:
-      - kafka-net
-    volumes:
-      - ./jars:/opt/jars
-      - .:/app
-  
-
-  spark-worker:
-    image: apache/spark:3.5.0
-    container_name: spark-worker
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-    networks:
-      - kafka-net
-    volumes:
-      - ./jars:/opt/jars
-      - .:/app
-    depends_on:
-      - spark-master
-
-  postgres:
-    image: postgres:15
-    container_name: postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
-    networks:
-      - kafka-net
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-      
-  jupyter:
-    image: jupyter/pyspark-notebook:latest
-    container_name: jupyter
-    ports:
-      - "8888:8888"
-      - "4040:4040"
-    networks:
-      - kafka-net
-    environment:
-      - SPARK_MASTER=spark://spark-master:7077
-      - JUPYTER_TOKEN=${JUPYTER_TOKEN}
-
-      - OPENSEARCH_HOST=${OPENSEARCH_HOST}
-      - OPENSEARCH_PORT=${OPENSEARCH_PORT}
-      - OPENSEARCH_USER=${OPENSEARCH_USER}
-      - OPENSEARCH_PASSWORD=${OPENSEARCH_PASSWORD}
-    volumes:
-      - .:/home/jovyan/work
-      - ./jars:/home/jovyan/jars
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s http://localhost:9200/_cluster/health | grep -E 'green|yellow' || exit 1"
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 10    
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
-    networks:
-      - kafka-net  
-    volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data          
-  elasticsearch-init:
-    image: curlimages/curl
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    entrypoint: >
-      sh -c "
-        echo 'Waiting for Elasticsearch...'
-
-        until curl -s http://elasticsearch:9200 >/dev/null; do
-          echo 'Elasticsearch not ready yet...'
-          sleep 5
-        done
-
-        echo 'Applying template...'
-
-        curl -f -X PUT http://elasticsearch:9200/_index_template/machine_template -H 'Content-Type: application/json' -d @/templates/machine_template.json
-
-        curl -f -X PUT http://elasticsearch:9200/_index_template/machine_aggregates_template -H 'Content-Type: application/json' -d @/templates/machine_aggregates_template.json
-
-        curl -f -X PUT http://elasticsearch:9200/machine-events
-
-        curl -f -X PUT http://elasticsearch:9200/machine-aggregates
-
-        curl -f -X PUT http://elasticsearch:9200/_index_template/worker_template -H 'Content-Type: application/json' -d @/templates/worker_template.json
-
-        curl -f -X PUT http://elasticsearch:9200/_index_template/worker_safety_template -H 'Content-Type: application/json' -d @/templates/worker_safety_template.json        
-
-        curl -f -X PUT http://elasticsearch:9200/worker-events
-
-        curl -f -X PUT http://elasticsearch:9200/worker-safety
-
-        echo 'Template applied successfully.'
-      "
-    volumes:
-      - ./elasticsearch/templates:/templates
-    networks:
-      - kafka-net    
-  kibana:
-    image: docker.elastic.co/kibana/kibana:8.13.0
-    ports:
-      - "5601:5601"
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - kafka-net     
-  kibana-init:
-    image: curlimages/curl
-    depends_on:
-      kibana:
-        condition: service_started
-
-    entrypoint: >
-      sh -c "
-        echo 'Waiting for Kibana...'
-
-        until curl -s http://kibana:5601/api/status | grep -q 'available'; do
-          echo 'Kibana not ready yet...'
-          sleep 5
-        done
-
-        echo 'Importing Kibana objects...'
-
-        until curl -f -X POST 'http://kibana:5601/api/saved_objects/_import?overwrite=true' -H 'kbn-xsrf: true' --form 'file=@/exports/export.ndjson'; do
-
-          echo 'Import failed, retrying in 5 seconds...'
-          sleep 5
-        done
-
-        echo 'Kibana import completed successfully.'
-      "
-    volumes:
-      - ./kibana/exports:/exports
-    networks:
-      - kafka-net   
-  minio:
-    image: minio/minio
-    container_name: minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
-    command: server /data --console-address ":9001"
-    volumes:
-      - ./minio_data:/data
-    networks:
-      - kafka-net
-  minio-init:
-    image: minio/mc
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-        until mc alias set myminio http://minio:9000 ${MINIO_USER} ${MINIO_PASSWORD}; do
-          echo 'MinIO not ready yet...'
-          sleep 5
-        done;
-
-        mc mb myminio/iot-data || true;
-
-        exit 0;
-      "
-    networks:
-      - kafka-net
-  grafana:
-    image: grafana/grafana-oss:13.0.2
-    container_name: grafana
-
-    environment:
-      - GF_FEATURE_TOGGLES_ENABLE=datasourceLegacyIdApi
-      - GF_INSTALL_PLUGINS=grafana-opensearch-datasource
-      - GF_PLUGINS_DISABLE_UPDATE_CHECK=true      
-
-    ports:
-      - "3000:3000"
-
-    restart: unless-stopped
-
-    networks:
-      - kafka-net
-
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-
 volumes:
   kafka1_data:
   kafka2_data:
   kafka3_data:
   zookeeper_data:
-  postgres_data:
-  elasticsearch_data:
+  
 networks:
   kafka-net:
     driver: bridge

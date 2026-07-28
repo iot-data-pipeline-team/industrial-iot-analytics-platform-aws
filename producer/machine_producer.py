@@ -281,7 +281,7 @@ def generate_reading(m):
 def main(interval, count):
 
 
-    print("Connected to Amazon MSK topic: machine-events")
+    print(f"Connected to Kafka topic: {TOPIC_NAME}")
 
     machine_cycle = cycle(MACHINES)
     sent_total    = 0
@@ -294,7 +294,7 @@ def main(interval, count):
             m     = next(machine_cycle)
             event = generate_reading(m)
 
-            # Send the event to Kinesis using machine_id as the partition key.
+            # Send the event to Kafka using machine_id as the message key.
             
             producer.produce(
                 topic=TOPIC_NAME,
@@ -304,9 +304,7 @@ def main(interval, count):
 
             producer.flush()
 
-            response = {
-                "ShardId": "MSK"
-            }
+
 
             # block briefly to catch send errors
             try:
@@ -341,7 +339,6 @@ def main(interval, count):
 
                 print(
                     f"  → [{sent_total:>4}]  "
-                    f"shard={response['ShardId']}  "
                     f"{event['machine_id']:<8}  "
                     f"{icon} {event['status']:<8}  "
                     f"temp={temp_display}°C  "                    

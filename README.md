@@ -9,6 +9,10 @@
 
 
 # 📸 Screenshots
+## Architecture
+<img width="1536" height="1024" alt="Cloud_Architecture" src="https://github.com/user-attachments/assets/520df913-e817-42a4-82f6-78f262724a14" />
+
+
 
 ## Kibana Dashboard
 

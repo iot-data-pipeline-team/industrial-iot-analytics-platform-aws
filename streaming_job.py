@@ -4,7 +4,7 @@ from pyspark.sql.functions import when, window, avg, to_timestamp, from_json, co
 from pyspark.sql.functions import to_json, struct, max
 from pyspark.sql.types import *
 import os
-
+from pyspark.sql.functions import current_date, current_timestamp
 
 spark = SparkSession.builder \
     .appName("IndustrialIoTAnalytics") \
@@ -366,6 +366,39 @@ gold_df = gold_df.select(
 #     .outputMode("append") \
 #     .trigger(processingTime="2 seconds") \
 #     .start()
+def write_machine_quarantine_to_s3(batch_df, batch_id):
+
+    batch_df = batch_df.withColumn(
+        "quarantine_date",
+        current_date()
+    ).withColumn(
+        "quarantine_hour",
+        hour(current_timestamp())
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "quarantine_date",
+            "quarantine_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/quarantine/machine/"
+        )
+
+
+machine_quarantine_s3_query = (
+    invalid_df
+    .writeStream
+    .foreachBatch(write_machine_quarantine_to_s3)
+    .outputMode("append")
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_quarantine_s3"
+    )
+    .start()
+)
+
 
 def write_bronze_to_s3(batch_df, batch_id):
 
@@ -439,7 +472,7 @@ def write_gold_to_s3(batch_df, batch_id):
 
 
 gold_s3_query = gold_df.writeStream \
-    .outputMode("update") \
+    .outputMode("append") \
     .foreachBatch(write_gold_to_s3) \
     .option(
         "checkpointLocation",
@@ -712,7 +745,7 @@ bronze_redshift_query = bronze_df.writeStream \
 
 
 # gold_redshift_query = gold_df.writeStream \
-#     .outputMode("update") \
+#     .outputMode("append") \
 #     .foreachBatch(write_machine_gold_to_redshift) \
 #     .trigger(processingTime="2 seconds") \
 #     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_redshift") \
@@ -793,7 +826,7 @@ def write_machine_gold_to_opensearch(batch_df, batch_id):
 
 machine_gold_opensearch_query = gold_df.writeStream \
     .foreachBatch(write_machine_gold_to_opensearch) \
-    .outputMode("update") \
+    .outputMode("append") \
     .option(
         "checkpointLocation",
         "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
@@ -1263,7 +1296,7 @@ worker_gold_df = (
 # worker_gold_redshift_query = (
 #     worker_gold_df
 #     .writeStream
-#     .outputMode("update")
+#     .outputMode("append")
 #     .foreachBatch(
 #         write_worker_gold_to_redshift
 #     )
@@ -1274,7 +1307,40 @@ worker_gold_df = (
 #     .start()
 # )
 
+def write_worker_quarantine_to_s3(batch_df, batch_id):
 
+    batch_df = batch_df.withColumn(
+        "quarantine_date",
+        current_date()
+    ).withColumn(
+        "quarantine_hour",
+        hour(current_timestamp())
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "quarantine_date",
+            "quarantine_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/quarantine/worker/"
+        )
+
+
+worker_quarantine_s3_query = (
+    worker_invalid_df
+    .writeStream
+    .foreachBatch(
+        write_worker_quarantine_to_s3
+    )
+    .outputMode("append")
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_quarantine_s3"
+    )
+    .start()
+)
 
 
 def write_worker_bronze_to_s3(
@@ -1378,7 +1444,7 @@ def write_worker_gold_to_s3(
 worker_gold_s3_query = (
     worker_gold_df
     .writeStream
-    .outputMode("update")
+    .outputMode("append")
     .foreachBatch(write_worker_gold_to_s3)
     .option(
         "checkpointLocation",
@@ -1489,7 +1555,7 @@ def write_worker_gold_to_opensearch(
 worker_gold_opensearch_query = (
     worker_gold_df
     .writeStream
-    .outputMode("update")
+    .outputMode("append")
     .foreachBatch(
         write_worker_gold_to_opensearch
     )

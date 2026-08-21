@@ -367,15 +367,26 @@ gold_df = gold_df.select(
 #     .trigger(processingTime="2 seconds") \
 #     .start()
 
-
 def write_bronze_to_s3(batch_df, batch_id):
+
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("timestamp"))
+    ).withColumn(
+        "event_hour",
+        hour(col("timestamp"))
+    )
 
     batch_df.write \
         .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
         .parquet(
-            "s3a://iot-platform-malek/bronze/machine_bronze_data/"
+            "s3a://iot-platform-malek/bronze/machine/"
         )
-    
+        
 bronze_s3_query = bronze_df.writeStream \
     .foreachBatch(write_bronze_to_s3) \
     .option(
@@ -383,64 +394,58 @@ bronze_s3_query = bronze_df.writeStream \
         "s3a://iot-platform-malek/checkpoints/machine_bronze_s3"
     ) \
     .start()
+def write_silver_to_s3(batch_df, batch_id):
 
-# def write_silver_to_s3(batch_df, batch_id):
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/silver/machine/"
+        )
 
-#     batch_df.write \
-#         .mode("append") \
-#         .parquet(
-#             "s3a://iot-platform-malek/silver/machine_silver_data/"
-#         )
-    
-# silver_s3_query = silver_df.writeStream \
-#     .foreachBatch(write_silver_to_s3) \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_silver_s3"
-#     ) \
-#     .start()
 
-# def write_gold_to_s3(batch_df, batch_id):
+silver_s3_query = silver_df.writeStream \
+    .foreachBatch(write_silver_to_s3) \
+    .outputMode("append") \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_silver_s3"
+    ) \
+    .start()
+def write_gold_to_s3(batch_df, batch_id):
 
-#     batch_df.select(
-#         col("machine_id"),
-#         col("window_start"),
-#         col("window_end"),
-#         col("avg_temp"),
-#         col("avg_rpm"),
-#         col("avg_vibration"),
-#         col("avg_power"),
-#         col("avg_health_score"),
-#         col("min_health_score"),
-#         col("fault_count"),
-#         col("fault_percentage"),
-#         col("total_events"),
-#         col("max_temp"),
-#         col("max_vibration"),
-#         col("peak_power"),
-#         col("avg_risk_score"),
-#         col("uptime_percentage"),
-                                      
-#     ).write \
-#      .mode("append") \
-#      .parquet(
-#          "s3a://iot-platform-malek/gold/machine_gold_data/"
-#      )
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("window_start"))
+    ).withColumn(
+        "event_hour",
+        hour(col("window_start"))
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/gold/machine/"
+        )
     
 
 
 
-
-
-# gold_s3_query = gold_df.writeStream \
-#     .foreachBatch(write_gold_to_s3) \
-#     .outputMode("update") \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
-#     ) \
-#     .start()
-
+gold_s3_query = gold_df.writeStream \
+    .outputMode("update") \
+    .foreachBatch(write_gold_to_s3) \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
+    ) \
+    .start()
 
 
 
@@ -1270,16 +1275,32 @@ worker_gold_df = (
 # )
 
 
+
+
 def write_worker_bronze_to_s3(
     batch_df,
     batch_id
 ):
 
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("timestamp"))
+    ).withColumn(
+        "event_hour",
+        hour(col("timestamp"))
+    )
+
     batch_df.write \
         .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
         .parquet(
-            "s3a://iot-platform-malek/bronze/worker_bronze_data/"
+            "s3a://iot-platform-malek/bronze/worker/"
         )
+
+
 worker_bronze_s3_query = (
     worker_bronze_df
     .writeStream
@@ -1294,69 +1315,77 @@ worker_bronze_s3_query = (
 )
 
 
+def write_worker_silver_to_s3(
+    batch_df,
+    batch_id
+):
 
-# def write_worker_silver_to_s3(
-#     batch_df,
-#     batch_id
-# ):
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("timestamp"))
+    ).withColumn(
+        "event_hour",
+        hour(col("timestamp"))
+    )
 
-#     batch_df.write \
-#         .mode("append") \
-#         .parquet(
-#             "s3a://iot-platform-malek/silver/worker_silver_data/"
-#         )
-# worker_silver_s3_query = (
-#     worker_silver_df
-#     .writeStream
-#     .foreachBatch(
-#         write_worker_silver_to_s3
-#     )
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_silver_s3"
-#     )
-#     .start()
-# )
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/silver/worker/"
+        )
 
-# def write_worker_gold_to_s3(
-#     batch_df,
-#     batch_id
-# ):
 
-#     batch_df.select(
-#         "worker_id",
-#         "window_start",
-#         "window_end",
-#         "violations_per_window",
-#         "workers_in_danger_zone",
-#         "avg_fatigue_score"
-#     ).write \
-#      .mode("append") \
-#      .parquet(
-#          "s3a://iot-platform-malek/gold/worker_gold_data/"
-#      )
-    
-# worker_gold_s3_query = (
-#     worker_gold_df
-#     .writeStream
-#     .outputMode("update")
-#     .foreachBatch(
-#         write_worker_gold_to_s3
-#     )
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/worker_gold_s3"
-#     )
-#     .start()
-# )    
-# print("Streaming queries:")
-# for q in spark.streams.active:
-#     print("--------------------------------")
-#     print("Name:", q.name)
-#     print("ID:", q.id)
-#     print("Status:", q.status)
-#     print("Recent progress:", q.recentProgress)
+worker_silver_s3_query = (
+    worker_silver_df
+    .writeStream
+    .foreachBatch(write_worker_silver_to_s3)
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_silver_s3"
+    )
+    .start()
+)
 
+
+def write_worker_gold_to_s3(
+    batch_df,
+    batch_id
+):
+
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("window_start"))
+    ).withColumn(
+        "event_hour",
+        hour(col("window_start"))
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/gold/worker/"
+        )
+
+
+worker_gold_s3_query = (
+    worker_gold_df
+    .writeStream
+    .outputMode("update")
+    .foreachBatch(write_worker_gold_to_s3)
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/worker_gold_s3"
+    )
+    .start()
+)
 
 
 

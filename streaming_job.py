@@ -292,10 +292,10 @@ silver_df = silver_df.withColumn(
 
     
 gold_df = silver_df \
-    .withWatermark("timestamp", "1 minute") \
+    .withWatermark("timestamp", "2 seconds") \
     .groupBy(
         col("machine_id"),
-        window(col("timestamp"), "1 minute")
+        window(col("timestamp"), "10 seconds")
     ) \
     .agg(
         avg("temperature").alias("avg_temp"),
@@ -1074,14 +1074,14 @@ worker_gold_df = (
 
     .withWatermark(
         "timestamp",
-        "1 minute"
+        "2 seconds"
     )
 
     .groupBy(
         col("worker_id"),
         window(
             col("timestamp"),
-            "5 minutes"
+            "10 seconds"
         )
     )
 

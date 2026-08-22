@@ -369,397 +369,344 @@ gold_df = gold_df.select(
 
 
 
-# def write_machine_quarantine_to_s3(batch_df, batch_id):
+def write_machine_quarantine_to_s3(batch_df, batch_id):
 
-#     batch_df = batch_df.withColumn(
-#         "quarantine_date",
-#         current_date()
-#     ).withColumn(
-#         "quarantine_hour",
-#         hour(current_timestamp())
-#     )
+    batch_df = batch_df.withColumn(
+        "quarantine_date",
+        current_date()
+    ).withColumn(
+        "quarantine_hour",
+        hour(current_timestamp())
+    )
 
-#     batch_df.write \
-#         .mode("append") \
-#         .partitionBy(
-#             "quarantine_date",
-#             "quarantine_hour"
-#         ) \
-#         .parquet(
-#             "s3a://iot-platform-malek/quarantine/machine/"
-#         )
-
-
-# machine_quarantine_s3_query = (
-#     invalid_df
-#     .writeStream
-#     .foreachBatch(write_machine_quarantine_to_s3)
-#     .outputMode("append")
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_quarantine_s3"
-#     )
-#     .start()
-# )
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "quarantine_date",
+            "quarantine_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/quarantine/machine/"
+        )
 
 
-# def write_bronze_to_s3(batch_df, batch_id):
+machine_quarantine_s3_query = (
+    invalid_df
+    .writeStream
+    .foreachBatch(write_machine_quarantine_to_s3)
+    .outputMode("append")
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_quarantine_s3"
+    )
+    .start()
+)
 
-#     batch_df = batch_df.withColumn(
-#         "event_date",
-#         to_date(col("timestamp"))
-#     ).withColumn(
-#         "event_hour",
-#         hour(col("timestamp"))
-#     )
 
-#     batch_df.write \
-#         .mode("append") \
-#         .partitionBy(
-#             "event_date",
-#             "event_hour"
-#         ) \
-#         .parquet(
-#             "s3a://iot-platform-malek/bronze/machine/"
-#         )
+def write_bronze_to_s3(batch_df, batch_id):
+
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("timestamp"))
+    ).withColumn(
+        "event_hour",
+        hour(col("timestamp"))
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/bronze/machine/"
+        )
         
-# bronze_s3_query = bronze_df.writeStream \
-#     .foreachBatch(write_bronze_to_s3) \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_bronze_s3"
-#     ) \
-#     .start()
+bronze_s3_query = bronze_df.writeStream \
+    .foreachBatch(write_bronze_to_s3) \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_bronze_s3"
+    ) \
+    .start()
 
 
 
-# def write_silver_to_s3(batch_df, batch_id):
+def write_silver_to_s3(batch_df, batch_id):
 
-#     batch_df.write \
-#         .mode("append") \
-#         .partitionBy(
-#             "event_date",
-#             "event_hour"
-#         ) \
-#         .parquet(
-#             "s3a://iot-platform-malek/silver/machine/"
-#         )
-
-
-# silver_s3_query = silver_df.writeStream \
-#     .foreachBatch(write_silver_to_s3) \
-#     .outputMode("append") \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_silver_s3"
-#     ) \
-#     .start()
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/silver/machine/"
+        )
 
 
+silver_s3_query = silver_df.writeStream \
+    .foreachBatch(write_silver_to_s3) \
+    .outputMode("append") \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_silver_s3"
+    ) \
+    .start()
 
 
-# def write_gold_to_s3(batch_df, batch_id):
 
-#     batch_df = batch_df.withColumn(
-#         "event_date",
-#         to_date(col("window_start"))
-#     ).withColumn(
-#         "event_hour",
-#         hour(col("window_start"))
-#     )
 
-#     batch_df.write \
-#         .mode("append") \
-#         .partitionBy(
-#             "event_date",
-#             "event_hour"
-#         ) \
-#         .parquet(
-#             "s3a://iot-platform-malek/gold/machine/"
-#         )
+def write_gold_to_s3(batch_df, batch_id):
+
+    batch_df = batch_df.withColumn(
+        "event_date",
+        to_date(col("window_start"))
+    ).withColumn(
+        "event_hour",
+        hour(col("window_start"))
+    )
+
+    batch_df.write \
+        .mode("append") \
+        .partitionBy(
+            "event_date",
+            "event_hour"
+        ) \
+        .parquet(
+            "s3a://iot-platform-malek/gold/machine/"
+        )
     
 
 
 
-# gold_s3_query = gold_df.writeStream \
-#     .outputMode("append") \
-#     .foreachBatch(write_gold_to_s3) \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
-#     ) \
-#     .start()
+gold_s3_query = gold_df.writeStream \
+    .outputMode("append") \
+    .foreachBatch(write_gold_to_s3) \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_gold_s3"
+    ) \
+    .start()
 
 
 
-# def write_machine_quarantine_to_redshift(
-#     batch_df,
-#     batch_id
-# ):
-#     try:
+def write_machine_quarantine_to_redshift(
+    batch_df,
+    batch_id
+):
+    try:
 
-#         missing = []
+        missing = []
 
-#         for c in [
-#             "event_id",
-#             "timestamp",
-#             "machine_id",
-#             "machine_type",
-#             "floor",
-#             "shift",
-#             "status",
-#             "error_code",
-#             "is_fault",
-#             "temperature",
-#             "vibration",
-#             "rpm",
-#             "power_kw",
-#             "cnc_oil",
-#             "coolant_pressure",
-#             "joint_torque",
-#             "force",
-#             "belt_tension",
-#             "load_weight",
-#             "flow_rate",
-#             "inlet_pressure",
-#             "validation_reason"
-#         ]:
-#             if c not in batch_df.columns:
-#                 missing.append(c)
+        for c in [
+            "event_id",
+            "timestamp",
+            "machine_id",
+            "machine_type",
+            "floor",
+            "shift",
+            "status",
+            "error_code",
+            "is_fault",
+            "temperature",
+            "vibration",
+            "rpm",
+            "power_kw",
+            "cnc_oil",
+            "coolant_pressure",
+            "joint_torque",
+            "force",
+            "belt_tension",
+            "load_weight",
+            "flow_rate",
+            "inlet_pressure",
+            "validation_reason"
+        ]:
+            if c not in batch_df.columns:
+                missing.append(c)
 
-#         print("MISSING COLUMNS:", missing)    
-#         print("===== QUARANTINE BATCH =====")
-#         print(batch_df.columns)
-#         # invalid_count = batch_df.count()
+        print("MISSING COLUMNS:", missing)    
+        print("===== QUARANTINE BATCH =====")
+        print(batch_df.columns)
+        # invalid_count = batch_df.count()
 
-#         batch_df.select(
-#             "event_id",
-#             "timestamp",
-#             "machine_id",
-#             "machine_type",
-#             "floor",
-#             "shift",
-#             "status",
-#             "error_code",
-#             "is_fault",
-#             "temperature",
-#             "vibration",
-#             "rpm",
-#             "power_kw",
-#             "cnc_oil",
-#             "coolant_pressure",
-#             "joint_torque",
-#             "force",
-#             "belt_tension",
-#             "load_weight",
-#             "flow_rate",
-#             "inlet_pressure",
-#             "validation_reason"
-#             ).write \
-#             .format("jdbc") \
-#             .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
-#             .option("dbtable", "machine_events_quarantine") \
-#             .option("user", "admin") \
-#             .option("password", REDSHIFT_PASSWORD) \
-#             .option("driver", "com.amazon.redshift.jdbc.Driver") \
-#             .mode("append") \
-#             .save()
+        batch_df.select(
+            "event_id",
+            "timestamp",
+            "machine_id",
+            "machine_type",
+            "floor",
+            "shift",
+            "status",
+            "error_code",
+            "is_fault",
+            "temperature",
+            "vibration",
+            "rpm",
+            "power_kw",
+            "cnc_oil",
+            "coolant_pressure",
+            "joint_torque",
+            "force",
+            "belt_tension",
+            "load_weight",
+            "flow_rate",
+            "inlet_pressure",
+            "validation_reason"
+            ).write \
+            .format("jdbc") \
+            .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
+            .option("dbtable", "machine_events_quarantine") \
+            .option("user", "admin") \
+            .option("password", REDSHIFT_PASSWORD) \
+            .option("driver", "com.amazon.redshift.jdbc.Driver") \
+            .mode("append") \
+            .save()
 
-#         # print(
-#         #     f"[QUALITY] Batch {batch_id}"
-#         #     f" Invalid Records = {invalid_count}"
-#         # )
-#     except Exception as e:
-#         print("QUARANTINE ERROR:")
-#         print(str(e))
-#         raise        
+        # print(
+        #     f"[QUALITY] Batch {batch_id}"
+        #     f" Invalid Records = {invalid_count}"
+        # )
+    except Exception as e:
+        print("QUARANTINE ERROR:")
+        print(str(e))
+        raise        
 
-# machine_invalid_query = (
-#     invalid_df.writeStream
-#     .foreachBatch(write_machine_quarantine_to_redshift)
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_quarantine_to_redshift"
-#     )
-#     .start()
-# )    
-
-
+machine_invalid_query = (
+    invalid_df.writeStream
+    .foreachBatch(write_machine_quarantine_to_redshift)
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_quarantine_to_redshift"
+    )
+    .start()
+)    
 
 
 
-# def write_machine_bronze_to_redshift(batch_df, batch_id):
 
-#     print(f"[BRONZE] Batch {batch_id}")
 
-#     batch_df.select(
-#         "event_id",
-#         "timestamp",
-#         "machine_id",
-#         "machine_type",
-#         "floor",
-#         "shift",
-#         "status",
-#         "error_code",
-#         "is_fault",
+def write_machine_bronze_to_redshift(batch_df, batch_id):
 
-#         "temperature",
-#         "vibration",
-#         "rpm",
-#         "power_kw",
+    print(f"[BRONZE] Batch {batch_id}")
 
-#         "cnc_oil",
-#         "coolant_pressure",
+    batch_df.select(
+        "event_id",
+        "timestamp",
+        "machine_id",
+        "machine_type",
+        "floor",
+        "shift",
+        "status",
+        "error_code",
+        "is_fault",
 
-#         "joint_torque",
-#         "force",
+        "temperature",
+        "vibration",
+        "rpm",
+        "power_kw",
 
-#         "belt_tension",
-#         "load_weight",
+        "cnc_oil",
+        "coolant_pressure",
 
-#         "flow_rate",
-#         "inlet_pressure"
-#     ).write \
-#         .format("jdbc") \
-#         .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
-#         .option("dbtable", "machine_events_bronze") \
-#         .option("user", "admin") \
-#         .option("password", REDSHIFT_PASSWORD) \
-#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
-#         .mode("append") \
-#         .save()
+        "joint_torque",
+        "force",
+
+        "belt_tension",
+        "load_weight",
+
+        "flow_rate",
+        "inlet_pressure"
+    ).write \
+        .format("jdbc") \
+        .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
+        .option("dbtable", "machine_events_bronze") \
+        .option("user", "admin") \
+        .option("password", REDSHIFT_PASSWORD) \
+        .option("driver", "com.amazon.redshift.jdbc.Driver") \
+        .mode("append") \
+        .save()
     
-# bronze_redshift_query = bronze_df.writeStream \
-#     .foreachBatch(write_machine_bronze_to_redshift) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
-#     .start()
+bronze_redshift_query = bronze_df.writeStream \
+    .foreachBatch(write_machine_bronze_to_redshift) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_bronze_redshift") \
+    .start()
 
 
 
 
-# def write_machine_silver_to_redshift(batch_df, batch_id):
+def write_machine_silver_to_redshift(batch_df, batch_id):
 
 
-#     batch_df.select(
-#         "event_id",
-#         "timestamp",
-#         "machine_id",
-#         "machine_type",
-#         "floor",
-#         "shift",
-#         "status",
-#         "error_code",
-#         "is_fault",
+    batch_df.select(
+        "event_id",
+        "timestamp",
+        "machine_id",
+        "machine_type",
+        "floor",
+        "shift",
+        "status",
+        "error_code",
+        "is_fault",
 
-#         "temperature",
-#         "vibration",
-#         "rpm",
-#         "power_kw",
-#         "power_status",
+        "temperature",
+        "vibration",
+        "rpm",
+        "power_kw",
+        "power_status",
         
 
-#         "cnc_oil",
-#         "coolant_pressure",
+        "cnc_oil",
+        "coolant_pressure",
 
-#         "joint_torque",
-#         "force",
+        "joint_torque",
+        "force",
 
-#         "belt_tension",
-#         "load_weight",
+        "belt_tension",
+        "load_weight",
 
-#         "flow_rate",
-#         "inlet_pressure",
+        "flow_rate",
+        "inlet_pressure",
 
-#         "temperature_status",
-#         "vibration_status",
+        "temperature_status",
+        "vibration_status",
 
-#         "running_flag",
+        "running_flag",
         
-#         "fault_flag",
-#         "fault_category",
-#         "event_date",
-#         "event_hour",
-#         "time_bucket",
+        "fault_flag",
+        "fault_category",
+        "event_date",
+        "event_hour",
+        "time_bucket",
         
 
-#         "health_score",
+        "health_score",
         
-#         "risk_score",
+        "risk_score",
 
-#         "anomaly_flag"
+        "anomaly_flag"
 
         
-#     ).write \
-#         .format("jdbc") \
-#         .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
-#         .option("dbtable", "machine_events_silver") \
-#         .option("user", "admin") \
-#         .option("password", REDSHIFT_PASSWORD) \
-#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
-#         .mode("append") \
-#         .save()
+    ).write \
+        .format("jdbc") \
+        .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
+        .option("dbtable", "machine_events_silver") \
+        .option("user", "admin") \
+        .option("password", REDSHIFT_PASSWORD) \
+        .option("driver", "com.amazon.redshift.jdbc.Driver") \
+        .mode("append") \
+        .save()
 
 
 
-# silver_redshift_query = silver_df.writeStream \
-#     .foreachBatch(write_machine_silver_to_redshift) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_redshift") \
-#     .start()
-
-
-
-
-
-
-
-
-# def write_machine_gold_to_redshift(batch_df, batch_id):
-
-
-#     print(f"[AGG] Batch {batch_id}")
-
-
-
-#     batch_df = batch_df.select(
-#         col("machine_id"),
-#         col("window_start"),
-#         col("window_end"),
-#         col("avg_temp"),
-#         col("avg_rpm"),
-#         col("avg_vibration"),
-#         col("avg_power"),
-#         col("avg_health_score"),
-#         col("min_health_score"),
-#         col("fault_count"),
-#         col("fault_percentage"),
-#         col("total_events"),
-#         col("max_temp"),
-#         col("max_vibration"),
-#         col("peak_power"),
-#         col("avg_risk_score"),
-#         col("uptime_percentage"),        
-
-#     )
-
-#     batch_df.write \
-#         .format("jdbc") \
-#         .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
-#         .option("dbtable", "machine_aggregates_gold") \
-#         .option("user", "admin") \
-#         .option("password", REDSHIFT_PASSWORD) \
-#         .option("driver", "com.amazon.redshift.jdbc.Driver") \
-#         .mode("append") \
-#         .save()
-
-
-# gold_redshift_query = gold_df.writeStream \
-#     .outputMode("append") \
-#     .foreachBatch(write_machine_gold_to_redshift) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_redshift") \
-#     .start()
+silver_redshift_query = silver_df.writeStream \
+    .foreachBatch(write_machine_silver_to_redshift) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_redshift") \
+    .start()
 
 
 
@@ -768,80 +715,133 @@ gold_df = gold_df.select(
 
 
 
-# def write_machine_silver_to_opensearch(batch_df, batch_id):
-#     try:    
-#         batch_df.write \
-#             .format("opensearch") \
-#             .option("opensearch.nodes", OPENSEARCH_HOST) \
-#             .option("opensearch.port", OPENSEARCH_PORT) \
-#             .option("opensearch.net.ssl", "true") \
-#             .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#             .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#             .option("opensearch.nodes.wan.only", "true") \
-#             .option("opensearch.index.auto.create", "true") \
-#             .mode("append") \
-#             .save("machine-events")
-#     except Exception as e:
-#         print(f"[FATAL] Opensearch write failed: {e}")
-#         raise e    
+def write_machine_gold_to_redshift(batch_df, batch_id):
+
+
+    print(f"[AGG] Batch {batch_id}")
 
 
 
-# machine_silver_opensearch_query = silver_df.writeStream \
-#     .foreachBatch(write_machine_silver_to_opensearch) \
-#     .trigger(processingTime="2 seconds") \
-#     .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_opensearch") \
-#     .start()
+    batch_df = batch_df.select(
+        col("machine_id"),
+        col("window_start"),
+        col("window_end"),
+        col("avg_temp"),
+        col("avg_rpm"),
+        col("avg_vibration"),
+        col("avg_power"),
+        col("avg_health_score"),
+        col("min_health_score"),
+        col("fault_count"),
+        col("fault_percentage"),
+        col("total_events"),
+        col("max_temp"),
+        col("max_vibration"),
+        col("peak_power"),
+        col("avg_risk_score"),
+        col("uptime_percentage"),        
+
+    )
+
+    batch_df.write \
+        .format("jdbc") \
+        .option("url", f"jdbc:redshift://{REDSHIFT_HOST}:{REDSHIFT_PORT}/{REDSHIFT_DB}") \
+        .option("dbtable", "machine_aggregates_gold") \
+        .option("user", "admin") \
+        .option("password", REDSHIFT_PASSWORD) \
+        .option("driver", "com.amazon.redshift.jdbc.Driver") \
+        .mode("append") \
+        .save()
 
 
-
-
-# def write_machine_gold_to_opensearch(batch_df, batch_id):
-#     try:
-#         batch_df.select(
-#             col("machine_id"),
-#             col("window_start"),
-#             col("window_end"),
-#             col("avg_temp"),
-#             col("avg_rpm"),
-#             col("avg_vibration"),
-#             col("avg_power"),
-#             col("avg_health_score"),
-#             col("min_health_score"),
-#             col("fault_count"),
-#             col("fault_percentage"),
-#             col("total_events"),
-#             col("max_temp"),
-#             col("max_vibration"),
-#             col("peak_power"),
-#             col("avg_risk_score"),
-#             col("uptime_percentage")          
-#         ).write \
-#         .format("opensearch") \
-#         .option("opensearch.nodes", OPENSEARCH_HOST) \
-#         .option("opensearch.port", OPENSEARCH_PORT) \
-#         .option("opensearch.net.ssl", "true") \
-#         .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
-#         .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
-#         .option("opensearch.nodes.wan.only", "true") \
-#         .option("opensearch.index.auto.create", "true") \
-#         .mode("append") \
-#         .save("machine-aggregates")
-#     except Exception as e:
-#         print(f"[FATAL] Opensearch write failed: {e}")
-#         raise e
+gold_redshift_query = gold_df.writeStream \
+    .outputMode("append") \
+    .foreachBatch(write_machine_gold_to_redshift) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_gold_redshift") \
+    .start()
 
 
 
 
-# machine_gold_opensearch_query = gold_df.writeStream \
-#     .foreachBatch(write_machine_gold_to_opensearch) \
-#     .outputMode("append") \
-#     .option(
-#         "checkpointLocation",
-#         "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
-#     ) \
-#     .start()
+
+
+
+
+def write_machine_silver_to_opensearch(batch_df, batch_id):
+    try:    
+        batch_df.write \
+            .format("opensearch") \
+            .option("opensearch.nodes", OPENSEARCH_HOST) \
+            .option("opensearch.port", OPENSEARCH_PORT) \
+            .option("opensearch.net.ssl", "true") \
+            .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+            .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+            .option("opensearch.nodes.wan.only", "true") \
+            .option("opensearch.index.auto.create", "true") \
+            .mode("append") \
+            .save("machine-events")
+    except Exception as e:
+        print(f"[FATAL] Opensearch write failed: {e}")
+        raise e    
+
+
+
+machine_silver_opensearch_query = silver_df.writeStream \
+    .foreachBatch(write_machine_silver_to_opensearch) \
+    .trigger(processingTime="2 seconds") \
+    .option("checkpointLocation", "s3a://iot-platform-malek/checkpoints/machine_silver_opensearch") \
+    .start()
+
+
+
+
+def write_machine_gold_to_opensearch(batch_df, batch_id):
+    try:
+        batch_df.select(
+            col("machine_id"),
+            col("window_start"),
+            col("window_end"),
+            col("avg_temp"),
+            col("avg_rpm"),
+            col("avg_vibration"),
+            col("avg_power"),
+            col("avg_health_score"),
+            col("min_health_score"),
+            col("fault_count"),
+            col("fault_percentage"),
+            col("total_events"),
+            col("max_temp"),
+            col("max_vibration"),
+            col("peak_power"),
+            col("avg_risk_score"),
+            col("uptime_percentage")          
+        ).write \
+        .format("opensearch") \
+        .option("opensearch.nodes", OPENSEARCH_HOST) \
+        .option("opensearch.port", OPENSEARCH_PORT) \
+        .option("opensearch.net.ssl", "true") \
+        .option("opensearch.net.http.auth.user", OPENSEARCH_USER) \
+        .option("opensearch.net.http.auth.pass", OPENSEARCH_PASSWORD) \
+        .option("opensearch.nodes.wan.only", "true") \
+        .option("opensearch.index.auto.create", "true") \
+        .mode("append") \
+        .save("machine-aggregates")
+    except Exception as e:
+        print(f"[FATAL] Opensearch write failed: {e}")
+        raise e
+
+
+
+
+machine_gold_opensearch_query = gold_df.writeStream \
+    .foreachBatch(write_machine_gold_to_opensearch) \
+    .outputMode("append") \
+    .option(
+        "checkpointLocation",
+        "s3a://iot-platform-malek/checkpoints/machine_gold_opensearch"
+    ) \
+    .start()
 
 
 
